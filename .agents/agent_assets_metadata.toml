@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "PS4xwmLfzU5M3Q2a8ZfQw"
+uri = "file://scripts/exports/apps-roles-security-setup.xlsx"
+type = "table"
+title = "Apps Roles & Security Setup"
