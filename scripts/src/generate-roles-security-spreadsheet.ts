@@ -11,16 +11,14 @@ const ROLES = [
 ];
 
 const ACCESS_LEVELS = [
-  "Full (CRUD)",
-  "Create/Edit",
-  "Edit Own",
-  "Read Only",
-  "No Access",
+  "Full Rights",
+  "Read & Write",
+  "View",
 ];
 
 type ItemRow = {
   item: string;
-  type: "Form" | "Table";
+  type: "Form" | "Tab" | "Table";
   description: string;
   access: string[]; // one per role, same order as ROLES
 };
@@ -37,29 +35,30 @@ type AppSection = {
   security: SecurityRow[];
 };
 
-const F = "Full (CRUD)";
-const CE = "Create/Edit";
-const EO = "Edit Own";
-const RO = "Read Only";
-const NA = "No Access";
+const F = "Full Rights";
+const RW = "Read & Write";
+const V = "View";
 
 const apps: AppSection[] = [
   {
     name: "PRODUCTION SHOP FLOOR",
     items: [
-      { item: "Work Order Form", type: "Form", description: "Create and update production work orders", access: [F, CE, RO, CE, CE] },
-      { item: "Production Schedule Form", type: "Form", description: "Plan and adjust production runs by line/shift", access: [F, CE, RO, CE, F] },
-      { item: "Downtime Report Form", type: "Form", description: "Log machine downtime and causes", access: [F, CE, CE, RO, CE] },
-      { item: "Quality Check Form", type: "Form", description: "Record quality inspections and results", access: [F, CE, RO, RO, RO] },
-      { item: "Material Request Form", type: "Form", description: "Request materials for production jobs", access: [F, CE, CE, CE, CE] },
-      { item: "Shift Handover Form", type: "Form", description: "Document shift-to-shift handover notes", access: [F, CE, CE, RO, CE] },
-      { item: "Work Orders Table", type: "Table", description: "Master list of all work orders and statuses", access: [F, CE, RO, CE, CE] },
-      { item: "Machines / Equipment Table", type: "Table", description: "Equipment registry, status, and maintenance info", access: [F, CE, RO, RO, RO] },
-      { item: "Production Schedule Table", type: "Table", description: "Scheduled runs by date, line, and shift", access: [F, CE, RO, CE, F] },
-      { item: "Downtime Log Table", type: "Table", description: "History of downtime events", access: [F, RO, RO, RO, RO] },
-      { item: "Quality Results Table", type: "Table", description: "Inspection outcomes and defect records", access: [F, RO, RO, RO, RO] },
-      { item: "Materials / Inventory Table", type: "Table", description: "Raw material stock levels and locations", access: [F, CE, RO, CE, RO] },
-      { item: "Operators / Shifts Table", type: "Table", description: "Operator roster and shift assignments", access: [F, CE, RO, RO, CE] },
+      { item: "Dashboard Tab", type: "Tab", description: "Overview of production status and KPIs", access: [F, RW, V, V, V] },
+      { item: "Scheduling Tab", type: "Tab", description: "Production scheduling workspace", access: [F, RW, V, RW, F] },
+      { item: "Reports Tab", type: "Tab", description: "Production, downtime, and quality reports", access: [F, RW, V, V, V] },
+      { item: "Work Order Form", type: "Form", description: "Create and update production work orders", access: [F, RW, V, RW, RW] },
+      { item: "Production Schedule Form", type: "Form", description: "Plan and adjust production runs by line/shift", access: [F, RW, V, RW, F] },
+      { item: "Downtime Report Form", type: "Form", description: "Log machine downtime and causes", access: [F, RW, RW, V, RW] },
+      { item: "Quality Check Form", type: "Form", description: "Record quality inspections and results", access: [F, RW, V, V, V] },
+      { item: "Material Request Form", type: "Form", description: "Request materials for production jobs", access: [F, RW, RW, RW, RW] },
+      { item: "Shift Handover Form", type: "Form", description: "Document shift-to-shift handover notes", access: [F, RW, RW, V, RW] },
+      { item: "Work Orders Table", type: "Table", description: "Master list of all work orders and statuses", access: [F, RW, V, RW, RW] },
+      { item: "Machines / Equipment Table", type: "Table", description: "Equipment registry, status, and maintenance info", access: [F, RW, V, V, V] },
+      { item: "Production Schedule Table", type: "Table", description: "Scheduled runs by date, line, and shift", access: [F, RW, V, RW, F] },
+      { item: "Downtime Log Table", type: "Table", description: "History of downtime events", access: [F, V, V, V, V] },
+      { item: "Quality Results Table", type: "Table", description: "Inspection outcomes and defect records", access: [F, V, V, V, V] },
+      { item: "Materials / Inventory Table", type: "Table", description: "Raw material stock levels and locations", access: [F, RW, V, RW, V] },
+      { item: "Operators / Shifts Table", type: "Table", description: "Operator roster and shift assignments", access: [F, RW, V, V, RW] },
     ],
     security: [
       { setting: "Authentication method", value: "SSO (company login)", notes: "All users sign in with company credentials" },
@@ -75,17 +74,20 @@ const apps: AppSection[] = [
   {
     name: "FIELD SERVICE CALENDAR",
     items: [
-      { item: "Service Request Form", type: "Form", description: "Log new customer service requests", access: [F, CE, F, RO, RO] },
-      { item: "Appointment Booking Form", type: "Form", description: "Schedule and assign service visits", access: [F, CE, F, RO, CE] },
-      { item: "Job Completion Form", type: "Form", description: "Record work performed and close out jobs", access: [F, CE, CE, RO, RO] },
-      { item: "Time & Parts Form", type: "Form", description: "Log labor hours and parts used per job", access: [F, CE, CE, RO, RO] },
-      { item: "Customer Sign-off Form", type: "Form", description: "Capture customer approval/signature", access: [F, RO, CE, NA, NA] },
-      { item: "Service Calendar Table", type: "Table", description: "Calendar of all scheduled appointments", access: [F, CE, F, RO, CE] },
-      { item: "Technicians Table", type: "Table", description: "Technician roster, skills, and availability", access: [F, CE, CE, RO, RO] },
-      { item: "Customers Table", type: "Table", description: "Customer contact and site information", access: [F, CE, CE, RO, RO] },
-      { item: "Equipment / Assets Table", type: "Table", description: "Customer equipment under service", access: [F, CE, CE, RO, RO] },
-      { item: "Service History Table", type: "Table", description: "Completed visits and outcomes", access: [F, RO, RO, RO, RO] },
-      { item: "Parts Inventory Table", type: "Table", description: "Van and warehouse parts stock", access: [F, CE, CE, RO, NA] },
+      { item: "Calendar Tab", type: "Tab", description: "Main scheduling calendar view", access: [F, RW, F, V, RW] },
+      { item: "Dispatch Board Tab", type: "Tab", description: "Assign and track technician jobs", access: [F, RW, F, V, V] },
+      { item: "Reports Tab", type: "Tab", description: "Service performance and history reports", access: [F, RW, V, V, V] },
+      { item: "Service Request Form", type: "Form", description: "Log new customer service requests", access: [F, RW, F, V, V] },
+      { item: "Appointment Booking Form", type: "Form", description: "Schedule and assign service visits", access: [F, RW, F, V, RW] },
+      { item: "Job Completion Form", type: "Form", description: "Record work performed and close out jobs", access: [F, RW, RW, V, V] },
+      { item: "Time & Parts Form", type: "Form", description: "Log labor hours and parts used per job", access: [F, RW, RW, V, V] },
+      { item: "Customer Sign-off Form", type: "Form", description: "Capture customer approval/signature", access: [F, V, RW, V, V] },
+      { item: "Service Calendar Table", type: "Table", description: "Calendar of all scheduled appointments", access: [F, RW, F, V, RW] },
+      { item: "Technicians Table", type: "Table", description: "Technician roster, skills, and availability", access: [F, RW, RW, V, V] },
+      { item: "Customers Table", type: "Table", description: "Customer contact and site information", access: [F, RW, RW, V, V] },
+      { item: "Equipment / Assets Table", type: "Table", description: "Customer equipment under service", access: [F, RW, RW, V, V] },
+      { item: "Service History Table", type: "Table", description: "Completed visits and outcomes", access: [F, V, V, V, V] },
+      { item: "Parts Inventory Table", type: "Table", description: "Van and warehouse parts stock", access: [F, RW, RW, V, V] },
     ],
     security: [
       { setting: "Authentication method", value: "SSO (company login)", notes: "Field techs may use mobile app login" },
@@ -141,7 +143,7 @@ async function main() {
   ws.mergeCells(2, 1, 2, NUM_COLS);
   const legend = ws.getCell(2, 1);
   legend.value =
-    "Access levels: Full (CRUD) = create/read/update/delete · Create/Edit = add & modify · Edit Own = modify own records only · Read Only · No Access. Change any cell using its dropdown.";
+    "Permission levels: Full Rights = full control (create/read/update/delete & settings) · Read & Write = view and edit records · View = read-only access. Change any cell using its dropdown.";
   legend.font = { italic: true, size: 10, color: { argb: "FF595959" } };
   legend.fill = { type: "pattern", pattern: "solid", fgColor: { argb: gray } };
   legend.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
@@ -152,11 +154,9 @@ async function main() {
 
   const accessFill = (v: string) => {
     switch (v) {
-      case "Full (CRUD)": return green;
-      case "Create/Edit": return lightBlue;
-      case "Edit Own": return yellow;
-      case "Read Only": return orange;
-      case "No Access": return red;
+      case "Full Rights": return green;
+      case "Read & Write": return lightBlue;
+      case "View": return orange;
       default: return gray;
     }
   };
@@ -173,7 +173,7 @@ async function main() {
     row++;
 
     // Matrix header
-    const headers = ["Form / Table", "Type", "Description", ...ROLES];
+    const headers = ["Form / Tab / Table", "Type", "Description", ...ROLES];
     headers.forEach((h, i) => {
       const c = ws.getCell(row, i + 1);
       c.value = h;
