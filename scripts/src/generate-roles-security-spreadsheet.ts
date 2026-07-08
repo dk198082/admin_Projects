@@ -41,6 +41,35 @@ const V = "View";
 
 const apps: AppSection[] = [
   {
+    name: "ADMIN CONSOLE (ALL APPS)",
+    items: [
+      { item: "User Management Tab", type: "Tab", description: "Create, edit, disable users across all apps", access: [F, V, V, V, V] },
+      { item: "Roles & Permissions Tab", type: "Tab", description: "Manage roles and access grants for all apps", access: [F, V, V, V, V] },
+      { item: "Security Settings Tab", type: "Tab", description: "Configure security policies per app (SSO, MFA, timeouts)", access: [F, V, V, V, V] },
+      { item: "Audit Log Tab", type: "Tab", description: "Review all changes to users, roles, and permissions", access: [F, V, V, V, V] },
+      { item: "New User Form", type: "Form", description: "Register a new user (name, email, status)", access: [F, V, V, V, V] },
+      { item: "Role Assignment Form", type: "Form", description: "Assign one or more roles to a user (User \u00d7 Role)", access: [F, V, V, V, V] },
+      { item: "Permission Grant Form", type: "Form", description: "Grant a role access to a resource at a permission level (Role \u00d7 Resource \u00d7 Level)", access: [F, V, V, V, V] },
+      { item: "Security Policy Form", type: "Form", description: "Edit an app's security policy (auth, MFA, session, audit)", access: [F, V, V, V, V] },
+      { item: "Users Table", type: "Table", description: "All users with status and assigned roles", access: [F, V, V, V, V] },
+      { item: "Roles Table", type: "Table", description: "The five roles and their descriptions", access: [F, V, V, V, V] },
+      { item: "Role Assignments Table", type: "Table", description: "User-to-role mappings (who has which role)", access: [F, V, V, V, V] },
+      { item: "Access Grants Table", type: "Table", description: "Role \u00d7 Resource \u00d7 Permission Level matrix (mirrors this spreadsheet)", access: [F, V, V, V, V] },
+      { item: "Resources Table", type: "Table", description: "All forms, tabs, and tables registered per app", access: [F, V, V, V, V] },
+      { item: "Permission Levels Table", type: "Table", description: "Full Rights / Read & Write / View definitions", access: [F, V, V, V, V] },
+      { item: "Security Policies Table", type: "Table", description: "Per-app security policy settings", access: [F, V, V, V, V] },
+      { item: "Audit Log Table", type: "Table", description: "History of all admin actions (who changed what, when)", access: [F, V, V, V, V] },
+    ],
+    security: [
+      { setting: "Who can access", value: "Admin role only (managers view-only)", notes: "All other roles: View at most; no edit rights anywhere in the console" },
+      { setting: "Multi-factor authentication (MFA)", value: "Always required", notes: "No exceptions for admin console access" },
+      { setting: "Session timeout", value: "15 minutes idle", notes: "Stricter than the apps it manages" },
+      { setting: "Approval workflow", value: "Admin role assignment needs a second Admin", notes: "Prevents a single admin from escalating privileges alone" },
+      { setting: "Audit logging", value: "Enabled - every action logged, immutable", notes: "Audit log is read-only even for Admin; retained 24 months" },
+      { setting: "Scope", value: "Cross-app: governs both apps below", notes: "Changes here apply to Production Shop Floor and Field Service Calendar" },
+    ],
+  },
+  {
     name: "PRODUCTION SHOP FLOOR",
     items: [
       { item: "Dashboard Tab", type: "Tab", description: "Overview of production status and KPIs", access: [F, RW, V, V, V] },

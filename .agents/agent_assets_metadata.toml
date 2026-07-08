@@ -5,4 +5,4 @@ generated = []
 id = "PS4xwmLfzU5M3Q2a8ZfQw"
 uri = "file://scripts/exports/apps-roles-security-setup.xlsx"
 type = "table"
-title = "Apps Roles & Security Setup (Full Rights / Read & Write / View)"
+title = "Apps Roles & Security Setup (with Admin Console)"
