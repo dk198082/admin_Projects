@@ -8,8 +8,8 @@ Role-based security administration for two internal apps ("Production Shop Floor
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/db run push` — push DB schema changes (targets the same DB as runtime)
+- DB: `AZURE_DATABASE_URL` secret (Azure PostgreSQL `d365crm`, schema `admin_console`) takes priority; falls back to Replit-managed `DATABASE_URL`
 
 ## Stack
 
@@ -35,6 +35,7 @@ Role-based security administration for two internal apps ("Production Shop Floor
 - `/` is a public landing page when signed out ("Sign in with Microsoft"); dashboard when signed in.
 - Required env: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`. Azure app registration must whitelist `https://<domain>/api/auth/callback` for each domain (dev + published).
 - Clerk was used briefly then replaced by Entra ID; CLERK_* secrets may linger but are unused.
+- Database: Azure PostgreSQL (`fs-postgresql-prod.postgres.database.azure.com`, db `d365crm`, schema `admin_console`, verified TLS). `getDbPoolConfig()` in `lib/db/src/poolConfig.ts` parses `AZURE_DATABASE_URL` leniently (unencoded password chars) and sets `search_path=admin_console`; used by both the Drizzle pool and the session store pool. Data was migrated from the old Replit DB (public schema) on 2026-07-08.
 
 ## Product
 

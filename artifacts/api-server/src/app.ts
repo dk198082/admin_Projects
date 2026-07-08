@@ -8,6 +8,7 @@ import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
+import { getDbPoolConfig } from "@workspace/db";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -46,7 +47,7 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("Missing SESSION_SECRET environment variable");
 }
 
-const sessionPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const sessionPool = new pg.Pool(getDbPoolConfig());
 
 // connect-pg-simple's createTableIfMissing reads a table.sql file that is not
 // included in the esbuild bundle, so create the table ourselves before the
