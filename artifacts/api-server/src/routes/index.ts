@@ -6,10 +6,12 @@ import appsResourcesRouter from "./appsResources";
 import grantsRouter from "./grants";
 import securityRouter from "./security";
 import auditRouter from "./audit";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(requireAuth);
 router.use(usersRouter);
 router.use(rolesRouter);
 router.use(appsResourcesRouter);
