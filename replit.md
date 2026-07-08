@@ -1,6 +1,6 @@
-# [Project name]
+# Apps & Roles Security Setup
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Role-based security administration for two internal apps ("Production Shop Floor", "Field Service Calendar"): a permission-matrix spreadsheet, a conceptual data model on canvas, and an Admin Console web app to manage users, roles, access grants, security policies, and an audit log.
 
 ## Run & Operate
 
@@ -22,7 +22,11 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/admin-console` — React+Vite Admin Console frontend (preview path `/`)
+- `artifacts/api-server/src/routes` — Express routes (users, roles, appsResources, grants, security, audit)
+- `lib/api-spec/openapi.yaml` — API contract source of truth (regen via codegen)
+- `lib/db/src/schema/` — Drizzle tables: apps, roles, users, roleAssignments, resources, accessGrants, securityPolicies, auditLog
+- `scripts/src/generate-roles-security-spreadsheet.ts` — permission-matrix Excel generator (`scripts/exports/apps-roles-security-setup.xlsx`)
 
 ## Architecture decisions
 
