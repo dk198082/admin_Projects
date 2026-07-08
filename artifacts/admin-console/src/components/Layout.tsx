@@ -5,6 +5,7 @@ import {
   Key, 
   Lock, 
   ActivitySquare,
+  AlertTriangle,
   PanelLeftClose,
   PanelLeft
 } from "lucide-react";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/permissions", label: "Permissions", icon: Key },
   { href: "/security", label: "Security Policies", icon: Lock },
   { href: "/audit", label: "Audit Log", icon: ActivitySquare },
+  { href: "/sync-errors", label: "Data Sync Error Log", icon: AlertTriangle },
 ];
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {

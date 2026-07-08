@@ -10,6 +10,7 @@ import Users from "@/pages/Users";
 import Permissions from "@/pages/Permissions";
 import Security from "@/pages/Security";
 import Audit from "@/pages/Audit";
+import SyncErrors from "@/pages/SyncErrors";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ function Router() {
           <Route path="/permissions" component={Permissions} />
           <Route path="/security" component={Security} />
           <Route path="/audit" component={Audit} />
+          <Route path="/sync-errors" component={SyncErrors} />
           <Route component={NotFound} />
         </Switch>
       </Layout>

@@ -30,6 +30,7 @@ import type {
   ListAccessGrantsParams,
   ListAuditLogParams,
   ListResourcesParams,
+  ListSyncErrorsParams,
   Resource,
   Role,
   RoleAssignment,
@@ -37,6 +38,7 @@ import type {
   SecurityPolicy,
   SecurityPolicyUpdate,
   Summary,
+  SyncErrorList,
   User,
   UserInput,
   UserUpdate
@@ -1482,6 +1484,90 @@ export function useListAuditLog<TData = Awaited<ReturnType<typeof listAuditLog>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListAuditLogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListSyncErrorsUrl = (params?: ListSyncErrorsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/sync/error-log?${stringifiedParams}` : `/api/sync/error-log`
+}
+
+/**
+ * @summary List data sync errors, unique per entity and record id, newest first
+ */
+export const listSyncErrors = async (params?: ListSyncErrorsParams, options?: RequestInit): Promise<SyncErrorList> => {
+
+  return customFetch<SyncErrorList>(getListSyncErrorsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSyncErrorsQueryKey = (params?: ListSyncErrorsParams,) => {
+    return [
+    `/api/sync/error-log`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSyncErrorsQueryOptions = <TData = Awaited<ReturnType<typeof listSyncErrors>>, TError = ErrorType<unknown>>(params?: ListSyncErrorsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSyncErrors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSyncErrorsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSyncErrors>>> = ({ signal }) => listSyncErrors(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSyncErrors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSyncErrorsQueryResult = NonNullable<Awaited<ReturnType<typeof listSyncErrors>>>
+export type ListSyncErrorsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List data sync errors, unique per entity and record id, newest first
+ */
+
+export function useListSyncErrors<TData = Awaited<ReturnType<typeof listSyncErrors>>, TError = ErrorType<unknown>>(
+ params?: ListSyncErrorsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSyncErrors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSyncErrorsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

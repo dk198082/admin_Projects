@@ -352,3 +352,26 @@ export const ListAuditLogResponseItem = zod.object({
 export const ListAuditLogResponse = zod.array(ListAuditLogResponseItem)
 
 
+/**
+ * @summary List data sync errors, unique per entity and record id, newest first
+ */
+export const listSyncErrorsQueryLimitDefault = 100;
+
+export const ListSyncErrorsQueryParams = zod.object({
+  "limit": zod.coerce.number().default(listSyncErrorsQueryLimitDefault),
+  "search": zod.coerce.string().optional()
+})
+
+export const ListSyncErrorsResponse = zod.object({
+  "entries": zod.array(zod.object({
+  "id": zod.number(),
+  "entitySetName": zod.string(),
+  "recordId": zod.string().nullable(),
+  "operation": zod.string(),
+  "errorMessage": zod.string(),
+  "createdOn": zod.string().nullable()
+})),
+  "totalUnique": zod.number()
+})
+
+

@@ -13,6 +13,20 @@ export interface ErrorMessage {
   error: string;
 }
 
+export interface SyncErrorEntry {
+  id: number;
+  entitySetName: string;
+  recordId: string | null;
+  operation: string;
+  errorMessage: string;
+  createdOn: string | null;
+}
+
+export interface SyncErrorList {
+  entries: SyncErrorEntry[];
+  totalUnique: number;
+}
+
 export type PermissionLevel = typeof PermissionLevel[keyof typeof PermissionLevel];
 
 
@@ -200,5 +214,10 @@ roleId?: number;
 
 export type ListAuditLogParams = {
 limit?: number;
+};
+
+export type ListSyncErrorsParams = {
+limit?: number;
+search?: string;
 };
 

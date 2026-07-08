@@ -22,6 +22,8 @@ tags:
     description: Security policies
   - name: audit
     description: Audit log
+  - name: sync
+    description: Data sync error log
 paths:
   /healthz:
     get:
@@ -390,6 +392,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuditEntry"
+  /sync/error-log:
+    get:
+      operationId: listSyncErrors
+      tags: [sync]
+      summary: List data sync errors, unique per entity and record id, newest first
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 100 }
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Sync errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncErrorList"
 components:
   schemas:
     HealthStatus:
@@ -404,6 +427,25 @@ components:
       required: [error]
       properties:
         error: { type: string }
+    SyncErrorEntry:
+      type: object
+      required: [id, entitySetName, recordId, operation, errorMessage, createdOn]
+      properties:
+        id: { type: integer }
+        entitySetName: { type: string }
+        recordId: { type: string, nullable: true }
+        operation: { type: string }
+        errorMessage: { type: string }
+        createdOn: { type: string, nullable: true }
+    SyncErrorList:
+      type: object
+      required: [entries, totalUnique]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncErrorEntry"
+        totalUnique: { type: integer }
     PermissionLevel:
       type: string
       enum: ["Full Rights", "Read & Write", "View"]
