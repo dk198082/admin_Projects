@@ -9,7 +9,13 @@ const features = [
 ];
 
 function signIn() {
-  window.location.href = `${import.meta.env.BASE_URL}api/auth/login`;
+  const url = `${import.meta.env.BASE_URL}api/auth/login`;
+  const target = window.top ?? window;
+  try {
+    target.location.href = url;
+  } catch {
+    window.open(url, "_blank");
+  }
 }
 
 function MicrosoftLogo() {
