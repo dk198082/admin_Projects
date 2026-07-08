@@ -1,1 +1,2 @@
 - [API server error handling](api-server-error-handling.md) — Drizzle Dates must be toISOString() before Zod parse; pg error codes hide under err.cause.
+- [connect-pg-simple + esbuild](connect-pg-simple-esbuild.md) — createTableIfMissing reads table.sql missing from bundles; create session table yourself before listen or logins fail with "session expired".

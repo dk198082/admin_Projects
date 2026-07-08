@@ -7,6 +7,7 @@ import express, {
 import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -45,12 +46,29 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("Missing SESSION_SECRET environment variable");
 }
 
+const sessionPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+
+// connect-pg-simple's createTableIfMissing reads a table.sql file that is not
+// included in the esbuild bundle, so create the table ourselves before the
+// server starts accepting requests (awaited in index.ts).
+export async function ensureSessionTable(): Promise<void> {
+  await sessionPool.query(
+    `CREATE TABLE IF NOT EXISTS "session" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL,
+      CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+    );
+    CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`,
+  );
+}
+
 app.use(
   session({
     store: new PgSession({
-      conString: process.env.DATABASE_URL,
+      pool: sessionPool,
       tableName: "session",
-      createTableIfMissing: true,
+      createTableIfMissing: false,
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -66,7 +84,11 @@ app.use(
 
 app.use("/api", router);
 
-app.use((err: unknown, req: Request, res: Response, _next: NextFunction): void => {
+app.use((err: unknown, req: Request, res: Response, next: NextFunction): void => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
   let pgCode: string | undefined;
   let cursor: unknown = err;
   for (let depth = 0; depth < 5 && typeof cursor === "object" && cursor !== null; depth++) {
