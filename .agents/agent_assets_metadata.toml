@@ -6,3 +6,15 @@ id = "PS4xwmLfzU5M3Q2a8ZfQw"
 uri = "file://scripts/exports/apps-roles-security-setup.xlsx"
 type = "table"
 title = "Apps Roles & Security Setup (with Admin Console)"
+
+[[outputs]]
+id = "1rmwtg5YbqXBz_HEqBdIm"
+uri = "file://scripts/exports/d365crm-database-structure.md"
+type = "text"
+title = "Database Structure Document (d365crm)"
+
+[[outputs]]
+id = "5pL3KFpXEaxpFKnJrSFHR"
+uri = "file://scripts/exports/d365crm-database-schema.sql.txt"
+type = "text"
+title = "Runnable Schema Script (d365crm)"
