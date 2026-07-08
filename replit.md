@@ -30,9 +30,11 @@ Role-based security administration for two internal apps ("Production Shop Floor
 
 ## Architecture decisions
 
-- Auth: Replit-managed Clerk. Proxy middleware mounted before body parsers in `app.ts`; `requireAuth` protects all `/api` routes except `/api/healthz`.
-- `/` is a public landing page when signed out; dashboard when signed in. Sign-in/up at `/sign-in`, `/sign-up` (wouter `/*?` wildcard routes).
-- Web auth is cookie-based — never add Bearer-token handling to browser API calls.
+- Auth: Azure Entra ID (OIDC via openid-client v6, PKCE + state). Routes: `/api/auth/login`, `/callback`, `/me`, `/logout`. Sessions in Postgres (`session` table, connect-pg-simple, SESSION_SECRET). Signed-in users JIT-provisioned into `app_user` table.
+- `requireAuth` (session check) protects all `/api` routes except `/api/healthz` and `/api/auth/*`. Session regenerated on login (fixation defense); redirect URI derived from first-hop forwarded headers with host validation.
+- `/` is a public landing page when signed out ("Sign in with Microsoft"); dashboard when signed in.
+- Required env: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`. Azure app registration must whitelist `https://<domain>/api/auth/callback` for each domain (dev + published).
+- Clerk was used briefly then replaced by Entra ID; CLERK_* secrets may linger but are unused.
 
 ## Product
 

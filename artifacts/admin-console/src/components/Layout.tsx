@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
-import { useClerk, useUser } from "@clerk/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuthUser } from "@/App";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -28,15 +29,23 @@ const navItems = [
 ];
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {
-  const { signOut } = useClerk();
-  const { user } = useUser();
-  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const { data: user } = useAuthUser();
+  const queryClient = useQueryClient();
+
+  const signOut = async () => {
+    await fetch(`${import.meta.env.BASE_URL}api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+    queryClient.clear();
+    window.location.href = import.meta.env.BASE_URL;
+  };
 
   return (
     <div className="p-3 shrink-0 border-t border-sidebar-border">
       {!collapsed && (
         <div className="px-1 pb-2 text-xs text-sidebar-foreground/70 truncate">
-          {user?.primaryEmailAddress?.emailAddress ?? user?.fullName ?? ""}
+          {user?.email ?? user?.name ?? ""}
         </div>
       )}
       <Button
@@ -46,7 +55,7 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           "w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
           collapsed ? "justify-center px-0" : "justify-start gap-2",
         )}
-        onClick={() => signOut({ redirectUrl: basePath || "/" })}
+        onClick={signOut}
         title="Sign out"
       >
         <LogOut className="h-4 w-4 shrink-0" />
