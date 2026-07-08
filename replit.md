@@ -30,7 +30,9 @@ Role-based security administration for two internal apps ("Production Shop Floor
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Auth: Replit-managed Clerk. Proxy middleware mounted before body parsers in `app.ts`; `requireAuth` protects all `/api` routes except `/api/healthz`.
+- `/` is a public landing page when signed out; dashboard when signed in. Sign-in/up at `/sign-in`, `/sign-up` (wouter `/*?` wildcard routes).
+- Web auth is cookie-based — never add Bearer-token handling to browser API calls.
 
 ## Product
 

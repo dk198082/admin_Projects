@@ -9,6 +9,8 @@ import {
   PanelLeft
 } from "lucide-react";
 import { useState } from "react";
+import { LogOut } from "lucide-react";
+import { useClerk, useUser } from "@clerk/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +26,35 @@ const navItems = [
   { href: "/security", label: "Security Policies", icon: Lock },
   { href: "/audit", label: "Audit Log", icon: ActivitySquare },
 ];
+
+function SidebarFooter({ collapsed }: { collapsed: boolean }) {
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  return (
+    <div className="p-3 shrink-0 border-t border-sidebar-border">
+      {!collapsed && (
+        <div className="px-1 pb-2 text-xs text-sidebar-foreground/70 truncate">
+          {user?.primaryEmailAddress?.emailAddress ?? user?.fullName ?? ""}
+        </div>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          collapsed ? "justify-center px-0" : "justify-start gap-2",
+        )}
+        onClick={() => signOut({ redirectUrl: basePath || "/" })}
+        title="Sign out"
+      >
+        <LogOut className="h-4 w-4 shrink-0" />
+        {!collapsed && <span className="text-sm">Sign out</span>}
+      </Button>
+    </div>
+  );
+}
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
@@ -75,9 +106,7 @@ export function Layout({ children }: LayoutProps) {
             );
           })}
         </nav>
-        <div className="p-4 shrink-0 text-xs text-sidebar-foreground/50 truncate">
-          {!collapsed && "System Control v1.0"}
-        </div>
+        <SidebarFooter collapsed={collapsed} />
       </aside>
       <main className="flex-1 overflow-auto bg-background">
         {children}
