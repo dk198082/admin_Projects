@@ -1,7 +1,11 @@
 import { Router, type IRouter } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { ListSyncErrorsQueryParams, ListSyncErrorsResponse } from "@workspace/api-zod";
+import {
+  ListSyncErrorsQueryParams,
+  ListSyncErrorsResponse,
+  ListSyncEntitiesResponse,
+} from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
@@ -13,8 +17,18 @@ router.get("/sync/error-log", async (req, res): Promise<void> => {
   }
   const limit = Math.max(1, Math.min(query.data.limit ?? 100, 500));
   const search = query.data.search?.trim();
-  const searchFilter = search
-    ? sql`WHERE entity_set_name ILIKE ${"%" + search + "%"} OR record_id::text ILIKE ${"%" + search + "%"} OR error_message ILIKE ${"%" + search + "%"}`
+  const entity = query.data.entity?.trim();
+  const conditions = [];
+  if (entity) {
+    conditions.push(sql`entity_set_name = ${entity}`);
+  }
+  if (search) {
+    conditions.push(
+      sql`(entity_set_name ILIKE ${"%" + search + "%"} OR record_id::text ILIKE ${"%" + search + "%"} OR error_message ILIKE ${"%" + search + "%"})`,
+    );
+  }
+  const searchFilter = conditions.length
+    ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
     : sql``;
 
   const [rowsResult, countResult] = await Promise.all([
@@ -70,6 +84,23 @@ router.get("/sync/error-log", async (req, res): Promise<void> => {
       entries,
       totalUnique: (countResult.rows[0] as { n: number }).n,
     }),
+  );
+});
+
+router.get("/sync/entities", async (_req, res): Promise<void> => {
+  const result = await db.execute(sql`
+    SELECT entity_set_name, COUNT(DISTINCT record_id)::int + (COUNT(*) FILTER (WHERE record_id IS NULL) > 0)::int AS n
+    FROM sync.error_log
+    GROUP BY entity_set_name
+    ORDER BY entity_set_name
+  `);
+  res.json(
+    ListSyncEntitiesResponse.parse(
+      result.rows.map((r) => {
+        const row = r as { entity_set_name: string; n: number };
+        return { entitySetName: row.entity_set_name, uniqueErrors: row.n };
+      }),
+    ),
   );
 });
 

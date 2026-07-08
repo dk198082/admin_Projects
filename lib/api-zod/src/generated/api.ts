@@ -359,7 +359,8 @@ export const listSyncErrorsQueryLimitDefault = 100;
 
 export const ListSyncErrorsQueryParams = zod.object({
   "limit": zod.coerce.number().default(listSyncErrorsQueryLimitDefault),
-  "search": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional(),
+  "entity": zod.coerce.string().optional()
 })
 
 export const ListSyncErrorsResponse = zod.object({
@@ -373,5 +374,15 @@ export const ListSyncErrorsResponse = zod.object({
 })),
   "totalUnique": zod.number()
 })
+
+
+/**
+ * @summary List entities that have sync errors, with unique error counts
+ */
+export const ListSyncEntitiesResponseItem = zod.object({
+  "entitySetName": zod.string(),
+  "uniqueErrors": zod.number()
+})
+export const ListSyncEntitiesResponse = zod.array(ListSyncEntitiesResponseItem)
 
 

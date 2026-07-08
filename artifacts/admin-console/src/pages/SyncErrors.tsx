@@ -1,15 +1,34 @@
 import { useState } from "react";
-import { useListSyncErrors, getListSyncErrorsQueryKey } from "@workspace/api-client-react";
+import {
+  useListSyncErrors,
+  getListSyncErrorsQueryKey,
+  useListSyncEntities,
+  getListSyncEntitiesQueryKey,
+} from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function SyncErrors() {
   const [search, setSearch] = useState("");
   const [applied, setApplied] = useState("");
-  const params = applied ? { search: applied } : {};
+  const [entity, setEntity] = useState<string>("__all__");
+  const params = {
+    ...(applied ? { search: applied } : {}),
+    ...(entity !== "__all__" ? { entity } : {}),
+  };
   const { data, isLoading } = useListSyncErrors(params, {
     query: { queryKey: getListSyncErrorsQueryKey(params) },
+  });
+  const { data: entities } = useListSyncEntities({
+    query: { queryKey: getListSyncEntitiesQueryKey() },
   });
 
   return (
@@ -20,20 +39,35 @@ export default function SyncErrors() {
         {data ? ` ${data.totalUnique.toLocaleString()} unique errors.` : ""}
       </p>
 
-      <form
-        className="mb-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setApplied(search.trim());
-        }}
-      >
-        <Input
-          placeholder="Search entity, record id, or error message… (press Enter)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-md"
-        />
-      </form>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Select value={entity} onValueChange={setEntity}>
+          <SelectTrigger className="w-[320px]">
+            <SelectValue placeholder="Filter by entity" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All entities</SelectItem>
+            {entities?.map((e) => (
+              <SelectItem key={e.entitySetName} value={e.entitySetName}>
+                {e.entitySetName} ({e.uniqueErrors.toLocaleString()})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <form
+          className="flex-1 min-w-[280px]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setApplied(search.trim());
+          }}
+        >
+          <Input
+            placeholder="Search record id or error message… (press Enter)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-md"
+          />
+        </form>
+      </div>
 
       <div className="border rounded-md bg-card overflow-hidden">
         <Table>

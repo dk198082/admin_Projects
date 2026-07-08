@@ -22,6 +22,11 @@ export interface SyncErrorEntry {
   createdOn: string | null;
 }
 
+export interface SyncEntityCount {
+  entitySetName: string;
+  uniqueErrors: number;
+}
+
 export interface SyncErrorList {
   entries: SyncErrorEntry[];
   totalUnique: number;
@@ -219,5 +224,6 @@ limit?: number;
 export type ListSyncErrorsParams = {
 limit?: number;
 search?: string;
+entity?: string;
 };
 

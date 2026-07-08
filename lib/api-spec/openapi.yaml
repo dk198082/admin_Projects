@@ -406,6 +406,10 @@ paths:
           in: query
           required: false
           schema: { type: string }
+        - name: entity
+          in: query
+          required: false
+          schema: { type: string }
       responses:
         "200":
           description: Sync errors
@@ -413,6 +417,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SyncErrorList"
+  /sync/entities:
+    get:
+      operationId: listSyncEntities
+      tags: [sync]
+      summary: List entities that have sync errors, with unique error counts
+      responses:
+        "200":
+          description: Entities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SyncEntityCount"
 components:
   schemas:
     HealthStatus:
@@ -437,6 +455,12 @@ components:
         operation: { type: string }
         errorMessage: { type: string }
         createdOn: { type: string, nullable: true }
+    SyncEntityCount:
+      type: object
+      required: [entitySetName, uniqueErrors]
+      properties:
+        entitySetName: { type: string }
+        uniqueErrors: { type: integer }
     SyncErrorList:
       type: object
       required: [entries, totalUnique]

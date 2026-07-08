@@ -26,6 +26,7 @@ export * from './roleAssignmentInput';
 export * from './securityPolicy';
 export * from './securityPolicyUpdate';
 export * from './summary';
+export * from './syncEntityCount';
 export * from './syncErrorEntry';
 export * from './syncErrorList';
 export * from './user';

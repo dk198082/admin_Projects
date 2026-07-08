@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListSyncErrorsParams = {
-limit?: number;
-search?: string;
-entity?: string;
-};
+export interface SyncEntityCount {
+  entitySetName: string;
+  uniqueErrors: number;
+}

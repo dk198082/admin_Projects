@@ -38,6 +38,7 @@ import type {
   SecurityPolicy,
   SecurityPolicyUpdate,
   Summary,
+  SyncEntityCount,
   SyncErrorList,
   User,
   UserInput,
@@ -1568,6 +1569,83 @@ export function useListSyncErrors<TData = Awaited<ReturnType<typeof listSyncErro
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListSyncErrorsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListSyncEntitiesUrl = () => {
+
+
+
+
+  return `/api/sync/entities`
+}
+
+/**
+ * @summary List entities that have sync errors, with unique error counts
+ */
+export const listSyncEntities = async ( options?: RequestInit): Promise<SyncEntityCount[]> => {
+
+  return customFetch<SyncEntityCount[]>(getListSyncEntitiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSyncEntitiesQueryKey = () => {
+    return [
+    `/api/sync/entities`
+    ] as const;
+    }
+
+
+export const getListSyncEntitiesQueryOptions = <TData = Awaited<ReturnType<typeof listSyncEntities>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSyncEntities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSyncEntitiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSyncEntities>>> = ({ signal }) => listSyncEntities({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSyncEntities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSyncEntitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listSyncEntities>>>
+export type ListSyncEntitiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List entities that have sync errors, with unique error counts
+ */
+
+export function useListSyncEntities<TData = Awaited<ReturnType<typeof listSyncEntities>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSyncEntities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSyncEntitiesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
