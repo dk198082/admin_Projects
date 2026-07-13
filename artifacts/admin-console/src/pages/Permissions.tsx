@@ -6,16 +6,23 @@ import {
   useListAccessGrants, getListAccessGrantsQueryKey,
   useCreateAccessGrant,
   useUpdateAccessGrant,
-  useDeleteAccessGrant
+  useDeleteAccessGrant,
+  useCreateRole
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Shield, LayoutGrid, FileText, Table as TableIcon } from "lucide-react";
+import { Shield, LayoutGrid, FileText, Table as TableIcon, Plus } from "lucide-react";
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PermissionLevel } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +54,38 @@ export default function Permissions() {
   const createGrant = useCreateAccessGrant();
   const updateGrant = useUpdateAccessGrant();
   const deleteGrant = useDeleteAccessGrant();
+  const createRole = useCreateRole();
+
+  const [isNewRoleOpen, setIsNewRoleOpen] = useState(false);
+  const [newRole, setNewRole] = useState({ name: "", description: "" });
+
+  const handleCreateRole = () => {
+    if (!newRole.name.trim()) {
+      toast({ title: "Role name is required", variant: "destructive" });
+      return;
+    }
+    createRole.mutate(
+      { data: { name: newRole.name.trim(), description: newRole.description.trim() } },
+      {
+        onSuccess: (role) => {
+          queryClient.invalidateQueries({ queryKey: getListRolesQueryKey() });
+          setIsNewRoleOpen(false);
+          setNewRole({ name: "", description: "" });
+          toast({
+            title: `Role "${role.name}" created`,
+            description: "Set its permissions in the new column of the matrix below.",
+          });
+        },
+        onError: (err: unknown) => {
+          const msg =
+            err && typeof err === "object" && "error" in err
+              ? String((err as { error: unknown }).error)
+              : "Failed to create role";
+          toast({ title: msg, variant: "destructive" });
+        },
+      },
+    );
+  };
 
   const handleGrantChange = (roleId: number, resourceId: number, currentGrantId: number | undefined, newLevel: string) => {
     if (newLevel === "None") {
@@ -98,18 +137,24 @@ export default function Permissions() {
           <p className="text-muted-foreground mt-1">Configure access matrix across applications.</p>
         </div>
         
-        <div className="w-64">
-          <Select value={selectedApp} onValueChange={setSelectedApp}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by Application" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Applications</SelectItem>
-              {apps?.map(app => (
-                <SelectItem key={app.id} value={app.id.toString()}>{app.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-3">
+          <div className="w-64">
+            <Select value={selectedApp} onValueChange={setSelectedApp}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by Application" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Applications</SelectItem>
+                {apps?.map(app => (
+                  <SelectItem key={app.id} value={app.id.toString()}>{app.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => { setNewRole({ name: "", description: "" }); setIsNewRoleOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Role
+          </Button>
         </div>
       </div>
 
@@ -178,6 +223,44 @@ export default function Permissions() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isNewRoleOpen} onOpenChange={setIsNewRoleOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Role</DialogTitle>
+            <DialogDescription>
+              The new role appears as a column in the permission matrix. Set its access level per
+              resource there — new roles start with no access.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="role-name">Role Name</Label>
+              <Input
+                id="role-name"
+                placeholder="e.g. Warehouse Supervisor"
+                value={newRole.name}
+                onChange={(e) => setNewRole((r) => ({ ...r, name: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role-desc">Description (optional)</Label>
+              <Input
+                id="role-desc"
+                placeholder="What is this role for?"
+                value={newRole.description}
+                onChange={(e) => setNewRole((r) => ({ ...r, description: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewRoleOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateRole} disabled={createRole.isPending}>
+              {createRole.isPending ? "Creating..." : "Create Role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

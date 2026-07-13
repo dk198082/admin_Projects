@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import {
   db,
   rolesTable,
@@ -9,9 +9,13 @@ import {
 } from "@workspace/db";
 import {
   ListRolesResponse,
+  CreateRoleBody,
+  CreateRoleResponse,
   ListRoleAssignmentsResponse,
   CreateRoleAssignmentBody,
   CreateRoleAssignmentResponse,
+  BulkCreateRoleAssignmentsBody,
+  BulkCreateRoleAssignmentsResponse,
   DeleteRoleAssignmentParams,
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
@@ -28,6 +32,69 @@ router.get("/roles", async (_req, res): Promise<void> => {
     grantCount: grants.filter((g) => g.roleId === r.id).length,
   }));
   res.json(ListRolesResponse.parse(result));
+});
+
+router.post("/roles", async (req, res): Promise<void> => {
+  const parsed = CreateRoleBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const name = parsed.data.name.trim();
+  if (!name) {
+    res.status(400).json({ error: "Role name is required" });
+    return;
+  }
+  const [inserted] = await db
+    .insert(rolesTable)
+    .values({ name, description: parsed.data.description?.trim() ?? "" })
+    .onConflictDoNothing()
+    .returning();
+  if (!inserted) {
+    res.status(400).json({ error: "A role with that name already exists" });
+    return;
+  }
+  await logAudit("create", "Role", `Created role ${inserted.name}`);
+  res
+    .status(201)
+    .json(CreateRoleResponse.parse({ ...inserted, userCount: 0, grantCount: 0 }));
+});
+
+router.post("/role-assignments/bulk", async (req, res): Promise<void> => {
+  const parsed = BulkCreateRoleAssignmentsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const userIds = [...new Set(parsed.data.userIds)];
+  const roleIds = [...new Set(parsed.data.roleIds)];
+  const users = await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
+  const roles = await db.select().from(rolesTable).where(inArray(rolesTable.id, roleIds));
+  if (users.length !== userIds.length || roles.length !== roleIds.length) {
+    res.status(400).json({ error: "One or more users or roles do not exist" });
+    return;
+  }
+  const pairs = userIds.flatMap((userId) => roleIds.map((roleId) => ({ userId, roleId })));
+  const inserted = await db
+    .insert(roleAssignmentsTable)
+    .values(pairs)
+    .onConflictDoNothing()
+    .returning();
+  if (inserted.length > 0) {
+    const roleNames = roles.map((r) => r.name).join(", ");
+    const userNames = users.map((u) => u.name).join(", ");
+    await logAudit(
+      "assign",
+      "Role",
+      `Bulk assigned role(s) ${roleNames} to user(s) ${userNames} (${inserted.length} new assignment(s))`,
+    );
+  }
+  res.json(
+    BulkCreateRoleAssignmentsResponse.parse({
+      created: inserted.length,
+      skipped: pairs.length - inserted.length,
+    }),
+  );
 });
 
 router.get("/role-assignments", async (_req, res): Promise<void> => {

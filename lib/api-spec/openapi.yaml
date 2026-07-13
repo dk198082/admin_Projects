@@ -148,6 +148,53 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Role"
+    post:
+      operationId: createRole
+      tags: [roles]
+      summary: Create a new role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleInput"
+      responses:
+        "201":
+          description: Created role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          description: Invalid input or duplicate name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /role-assignments/bulk:
+    post:
+      operationId: bulkCreateRoleAssignments
+      tags: [roles]
+      summary: Assign one or more roles to one or more users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkRoleAssignmentInput"
+      responses:
+        "200":
+          description: Bulk assignment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkRoleAssignmentResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /role-assignments:
     get:
       operationId: listRoleAssignments
@@ -528,6 +575,30 @@ components:
         description: { type: string }
         userCount: { type: integer }
         grantCount: { type: integer }
+    CreateRoleInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+    BulkRoleAssignmentInput:
+      type: object
+      required: [userIds, roleIds]
+      properties:
+        userIds:
+          type: array
+          items: { type: integer }
+          minItems: 1
+        roleIds:
+          type: array
+          items: { type: integer }
+          minItems: 1
+    BulkRoleAssignmentResult:
+      type: object
+      required: [created, skipped]
+      properties:
+        created: { type: integer }
+        skipped: { type: integer }
     RoleAssignment:
       type: object
       required: [id, userId, userName, roleId, roleName, createdAt]

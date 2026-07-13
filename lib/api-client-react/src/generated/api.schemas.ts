@@ -116,6 +116,24 @@ export interface Role {
   grantCount: number;
 }
 
+export interface CreateRoleInput {
+  /** @minLength 1 */
+  name: string;
+  description?: string;
+}
+
+export interface BulkRoleAssignmentInput {
+  /** @minItems 1 */
+  userIds: number[];
+  /** @minItems 1 */
+  roleIds: number[];
+}
+
+export interface BulkRoleAssignmentResult {
+  created: number;
+  skipped: number;
+}
+
 export interface RoleAssignment {
   id: number;
   userId: number;

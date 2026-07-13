@@ -8,11 +8,13 @@ import {
   useUpdateUser,
   useDeleteUser,
   useCreateRoleAssignment,
-  useDeleteRoleAssignment
+  useDeleteRoleAssignment,
+  useBulkCreateRoleAssignments
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Plus, Search, MoreVertical, Shield, Trash2, Edit2, Check, X, Key } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
@@ -49,11 +51,52 @@ export default function Users() {
   const deleteUser = useDeleteUser();
   const createAssignment = useCreateRoleAssignment();
   const deleteAssignment = useDeleteRoleAssignment();
+  const bulkAssign = useBulkCreateRoleAssignments();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
   const [formData, setFormData] = useState({ name: "", email: "", status: "active" as UserStatus });
+
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
+
+  const toggleUserSelected = (id: number, checked: boolean) => {
+    setSelectedUserIds(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleRoleSelected = (id: number, checked: boolean) => {
+    setSelectedRoleIds(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleBulkAssign = () => {
+    bulkAssign.mutate(
+      { data: { userIds: [...selectedUserIds], roleIds: [...selectedRoleIds] } },
+      {
+        onSuccess: (result) => {
+          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListRolesQueryKey() });
+          setIsAssignOpen(false);
+          setSelectedRoleIds(new Set());
+          setSelectedUserIds(new Set());
+          toast({
+            title: `${result.created} role assignment${result.created === 1 ? "" : "s"} added`,
+            description: result.skipped > 0 ? `${result.skipped} already existed and were skipped.` : undefined,
+          });
+        },
+        onError: () => toast({ title: "Failed to assign roles", variant: "destructive" }),
+      },
+    );
+  };
 
   const filteredUsers = users?.filter(u => 
     u.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -121,7 +164,7 @@ export default function Users() {
       </div>
 
       <div className="border rounded-md bg-card overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+        <div className="p-4 border-b border-border/50 bg-muted/20 flex items-center justify-between gap-4">
           <div className="relative w-72">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -131,10 +174,41 @@ export default function Users() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <div className="flex items-center gap-3">
+            {selectedUserIds.size > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {selectedUserIds.size} selected
+              </span>
+            )}
+            <Button
+              variant="secondary"
+              disabled={selectedUserIds.size === 0}
+              onClick={() => { setSelectedRoleIds(new Set()); setIsAssignOpen(true); }}
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Assign Roles
+            </Button>
+          </div>
         </div>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={
+                    !!filteredUsers?.length &&
+                    filteredUsers.every(u => selectedUserIds.has(u.id))
+                  }
+                  onCheckedChange={(checked: boolean) => {
+                    setSelectedUserIds(prev => {
+                      const next = new Set(prev);
+                      filteredUsers?.forEach(u => { if (checked) next.add(u.id); else next.delete(u.id); });
+                      return next;
+                    });
+                  }}
+                  aria-label="Select all users"
+                />
+              </TableHead>
               <TableHead>User</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Roles</TableHead>
@@ -145,14 +219,21 @@ export default function Users() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">Loading...</TableCell>
+                <TableCell colSpan={6} className="h-24 text-center">Loading...</TableCell>
               </TableRow>
             ) : filteredUsers?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No users found.</TableCell>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No users found.</TableCell>
               </TableRow>
             ) : filteredUsers?.map((user) => (
-              <TableRow key={user.id} className="group">
+              <TableRow key={user.id} className="group" data-state={selectedUserIds.has(user.id) ? "selected" : undefined}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedUserIds.has(user.id)}
+                    onCheckedChange={(checked: boolean) => toggleUserSelected(user.id, checked)}
+                    aria-label={`Select ${user.name}`}
+                  />
+                </TableCell>
                 <TableCell>
                   <div className="font-medium">{user.name}</div>
                   <div className="text-xs text-muted-foreground">{user.email}</div>
@@ -228,6 +309,49 @@ export default function Users() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isAssignOpen} onOpenChange={(o) => { if (!o) setIsAssignOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Roles</DialogTitle>
+            <DialogDescription>
+              Grant the selected role{selectedRoleIds.size === 1 ? "" : "s"} to{" "}
+              {selectedUserIds.size} selected user{selectedUserIds.size === 1 ? "" : "s"}. Existing
+              assignments are kept as-is.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-2 max-h-72 overflow-y-auto">
+            {roles?.map(role => (
+              <label
+                key={role.id}
+                className="flex items-center gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/40 transition-colors"
+              >
+                <Checkbox
+                  checked={selectedRoleIds.has(role.id)}
+                  onCheckedChange={(checked: boolean) => toggleRoleSelected(role.id, checked)}
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{role.name}</div>
+                  {role.description && (
+                    <div className="text-xs text-muted-foreground">{role.description}</div>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleBulkAssign}
+              disabled={selectedRoleIds.size === 0 || bulkAssign.isPending}
+            >
+              {bulkAssign.isPending
+                ? "Assigning..."
+                : `Assign ${selectedRoleIds.size || ""} role${selectedRoleIds.size === 1 ? "" : "s"}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isCreateOpen || !!editingUser} onOpenChange={(o) => {
         if (!o) { setIsCreateOpen(false); setEditingUser(null); }

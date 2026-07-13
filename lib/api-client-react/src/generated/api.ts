@@ -25,6 +25,9 @@ import type {
   AccessGrantUpdate,
   App,
   AuditEntry,
+  BulkRoleAssignmentInput,
+  BulkRoleAssignmentResult,
+  CreateRoleInput,
   ErrorMessage,
   HealthStatus,
   ListAccessGrantsParams,
@@ -591,6 +594,146 @@ export function useListRoles<TData = Awaited<ReturnType<typeof listRoles>>, TErr
 
 
 
+
+export const getCreateRoleUrl = () => {
+
+
+
+
+  return `/api/roles`
+}
+
+/**
+ * @summary Create a new role
+ */
+export const createRole = async (createRoleInput: CreateRoleInput, options?: RequestInit): Promise<Role> => {
+
+  return customFetch<Role>(getCreateRoleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createRoleInput)
+  }
+);}
+
+
+
+
+export const getCreateRoleMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRole>>, TError,{data: BodyType<CreateRoleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRole>>, TError,{data: BodyType<CreateRoleInput>}, TContext> => {
+
+const mutationKey = ['createRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRole>>, {data: BodyType<CreateRoleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRole(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof createRole>>>
+    export type CreateRoleMutationBody = BodyType<CreateRoleInput>
+    export type CreateRoleMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Create a new role
+ */
+export const useCreateRole = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRole>>, TError,{data: BodyType<CreateRoleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRole>>,
+        TError,
+        {data: BodyType<CreateRoleInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRoleMutationOptions(options));
+    }
+
+export const getBulkCreateRoleAssignmentsUrl = () => {
+
+
+
+
+  return `/api/role-assignments/bulk`
+}
+
+/**
+ * @summary Assign one or more roles to one or more users
+ */
+export const bulkCreateRoleAssignments = async (bulkRoleAssignmentInput: BulkRoleAssignmentInput, options?: RequestInit): Promise<BulkRoleAssignmentResult> => {
+
+  return customFetch<BulkRoleAssignmentResult>(getBulkCreateRoleAssignmentsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkRoleAssignmentInput)
+  }
+);}
+
+
+
+
+export const getBulkCreateRoleAssignmentsMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkCreateRoleAssignments>>, TError,{data: BodyType<BulkRoleAssignmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkCreateRoleAssignments>>, TError,{data: BodyType<BulkRoleAssignmentInput>}, TContext> => {
+
+const mutationKey = ['bulkCreateRoleAssignments'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkCreateRoleAssignments>>, {data: BodyType<BulkRoleAssignmentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkCreateRoleAssignments(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkCreateRoleAssignmentsMutationResult = NonNullable<Awaited<ReturnType<typeof bulkCreateRoleAssignments>>>
+    export type BulkCreateRoleAssignmentsMutationBody = BodyType<BulkRoleAssignmentInput>
+    export type BulkCreateRoleAssignmentsMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Assign one or more roles to one or more users
+ */
+export const useBulkCreateRoleAssignments = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkCreateRoleAssignments>>, TError,{data: BodyType<BulkRoleAssignmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkCreateRoleAssignments>>,
+        TError,
+        {data: BodyType<BulkRoleAssignmentInput>},
+        TContext
+      > => {
+      return useMutation(getBulkCreateRoleAssignmentsMutationOptions(options));
+    }
 
 export const getListRoleAssignmentsUrl = () => {
 

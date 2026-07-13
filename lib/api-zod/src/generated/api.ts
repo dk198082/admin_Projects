@@ -135,6 +135,44 @@ export const ListRolesResponse = zod.array(ListRolesResponseItem)
 
 
 /**
+ * @summary Create a new role
+ */
+
+
+
+export const CreateRoleBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional()
+})
+
+export const CreateRoleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "userCount": zod.number(),
+  "grantCount": zod.number()
+})
+
+
+/**
+ * @summary Assign one or more roles to one or more users
+ */
+
+
+
+
+export const BulkCreateRoleAssignmentsBody = zod.object({
+  "userIds": zod.array(zod.number()).min(1),
+  "roleIds": zod.array(zod.number()).min(1)
+})
+
+export const BulkCreateRoleAssignmentsResponse = zod.object({
+  "created": zod.number(),
+  "skipped": zod.number()
+})
+
+
+/**
  * @summary List user-role assignments
  */
 export const ListRoleAssignmentsResponseItem = zod.object({
