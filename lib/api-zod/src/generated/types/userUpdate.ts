@@ -13,4 +13,5 @@ export interface UserUpdate {
   /** @minLength 3 */
   email?: string;
   status?: UserUpdateStatus;
+  entraObjectId?: string;
 }

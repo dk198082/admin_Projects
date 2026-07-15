@@ -40,6 +40,7 @@ export const ListUsersResponseItem = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['active', 'disabled']),
+  "entraObjectId": zod.string().nullish(),
   "roles": zod.array(zod.object({
   "assignmentId": zod.number(),
   "roleId": zod.number(),
@@ -62,6 +63,7 @@ export const CreateUserBody = zod.object({
   "name": zod.string().min(1),
   "email": zod.string().min(createUserBodyEmailMin),
   "status": zod.enum(['active', 'disabled']).optional(),
+  "entraObjectId": zod.string().optional(),
   "roleIds": zod.array(zod.number()).optional()
 })
 
@@ -70,6 +72,7 @@ export const CreateUserResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['active', 'disabled']),
+  "entraObjectId": zod.string().nullish(),
   "roles": zod.array(zod.object({
   "assignmentId": zod.number(),
   "roleId": zod.number(),
@@ -94,7 +97,8 @@ export const updateUserBodyEmailMin = 3;
 export const UpdateUserBody = zod.object({
   "name": zod.string().min(1).optional(),
   "email": zod.string().min(updateUserBodyEmailMin).optional(),
-  "status": zod.enum(['active', 'disabled']).optional()
+  "status": zod.enum(['active', 'disabled']).optional(),
+  "entraObjectId": zod.string().optional()
 })
 
 export const UpdateUserResponse = zod.object({
@@ -102,6 +106,7 @@ export const UpdateUserResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['active', 'disabled']),
+  "entraObjectId": zod.string().nullish(),
   "roles": zod.array(zod.object({
   "assignmentId": zod.number(),
   "roleId": zod.number(),
@@ -119,6 +124,26 @@ export const DeleteUserParams = zod.object({
 })
 
 export const DeleteUserResponse = zod.void()
+
+
+/**
+ * @summary Search Azure Entra ID directory users by name or email
+ */
+export const searchEntraUsersQueryQueryMin = 2;
+
+
+
+export const SearchEntraUsersQueryParams = zod.object({
+  "query": zod.coerce.string().min(searchEntraUsersQueryQueryMin)
+})
+
+export const SearchEntraUsersResponseItem = zod.object({
+  "objectId": zod.string(),
+  "displayName": zod.string(),
+  "email": zod.string(),
+  "accountEnabled": zod.boolean()
+})
+export const SearchEntraUsersResponse = zod.array(SearchEntraUsersResponseItem)
 
 
 /**

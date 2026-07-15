@@ -71,6 +71,7 @@ export interface User {
   name: string;
   email: string;
   status: UserStatus;
+  entraObjectId?: string | null;
   roles: UserRolesItem[];
   createdAt: string;
 }
@@ -89,6 +90,7 @@ export interface UserInput {
   /** @minLength 3 */
   email: string;
   status?: UserInputStatus;
+  entraObjectId?: string;
   roleIds?: number[];
 }
 
@@ -106,6 +108,14 @@ export interface UserUpdate {
   /** @minLength 3 */
   email?: string;
   status?: UserUpdateStatus;
+  entraObjectId?: string;
+}
+
+export interface EntraUser {
+  objectId: string;
+  displayName: string;
+  email: string;
+  accountEnabled: boolean;
 }
 
 export interface Role {
@@ -225,6 +235,13 @@ export interface AuditEntry {
   actor: string;
   createdAt: string;
 }
+
+export type SearchEntraUsersParams = {
+/**
+ * @minLength 2
+ */
+query: string;
+};
 
 export type ListResourcesParams = {
 appId?: number;

@@ -13,6 +13,7 @@ export interface User {
   name: string;
   email: string;
   status: UserStatus;
+  entraObjectId?: string | null;
   roles: UserRolesItem[];
   createdAt: string;
 }

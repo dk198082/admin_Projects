@@ -7,6 +7,7 @@ import grantsRouter from "./grants";
 import securityRouter from "./security";
 import auditRouter from "./audit";
 import syncRouter from "./sync";
+import entraRouter from "./entra";
 import authRouter from "./auth";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -22,5 +23,6 @@ router.use(grantsRouter);
 router.use(securityRouter);
 router.use(auditRouter);
 router.use(syncRouter);
+router.use(entraRouter);
 
 export default router;

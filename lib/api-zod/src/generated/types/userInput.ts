@@ -13,5 +13,6 @@ export interface UserInput {
   /** @minLength 3 */
   email: string;
   status?: UserInputStatus;
+  entraObjectId?: string;
   roleIds?: number[];
 }

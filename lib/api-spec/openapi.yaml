@@ -134,6 +134,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /entra/users:
+    get:
+      operationId: searchEntraUsers
+      tags: [users]
+      summary: Search Azure Entra ID directory users by name or email
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: { type: string, minLength: 2 }
+      responses:
+        "200":
+          description: Matching directory users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntraUser"
+        "400":
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "502":
+          description: Directory lookup failed (e.g. missing Graph permission)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /roles:
     get:
       operationId: listRoles
@@ -540,6 +571,7 @@ components:
         name: { type: string }
         email: { type: string }
         status: { type: string, enum: [active, disabled] }
+        entraObjectId: { type: string, nullable: true }
         roles:
           type: array
           items:
@@ -557,6 +589,7 @@ components:
         name: { type: string, minLength: 1 }
         email: { type: string, minLength: 3 }
         status: { type: string, enum: [active, disabled] }
+        entraObjectId: { type: string }
         roleIds:
           type: array
           items: { type: integer }
@@ -566,6 +599,15 @@ components:
         name: { type: string, minLength: 1 }
         email: { type: string, minLength: 3 }
         status: { type: string, enum: [active, disabled] }
+        entraObjectId: { type: string }
+    EntraUser:
+      type: object
+      required: [objectId, displayName, email, accountEnabled]
+      properties:
+        objectId: { type: string }
+        displayName: { type: string }
+        email: { type: string }
+        accountEnabled: { type: boolean }
     Role:
       type: object
       required: [id, name, description, userCount, grantCount]

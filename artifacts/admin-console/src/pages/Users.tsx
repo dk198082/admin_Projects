@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   useListUsers, 
   getListUsersQueryKey, 
@@ -9,7 +9,9 @@ import {
   useDeleteUser,
   useCreateRoleAssignment,
   useDeleteRoleAssignment,
-  useBulkCreateRoleAssignments
+  useBulkCreateRoleAssignments,
+  useSearchEntraUsers,
+  getSearchEntraUsersQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -56,7 +58,30 @@ export default function Users() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
-  const [formData, setFormData] = useState({ name: "", email: "", status: "active" as UserStatus });
+  const [formData, setFormData] = useState({ name: "", email: "", status: "active" as UserStatus, entraObjectId: "" });
+
+  const [entraSearch, setEntraSearch] = useState("");
+  const [debouncedEntraSearch, setDebouncedEntraSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedEntraSearch(entraSearch.trim()), 350);
+    return () => clearTimeout(t);
+  }, [entraSearch]);
+
+  const entraQueryEnabled = isCreateOpen && debouncedEntraSearch.length >= 2;
+  const {
+    data: entraResults,
+    isFetching: entraSearching,
+    error: entraError,
+  } = useSearchEntraUsers(
+    { query: debouncedEntraSearch },
+    {
+      query: {
+        queryKey: getSearchEntraUsersQueryKey({ query: debouncedEntraSearch }),
+        enabled: entraQueryEnabled,
+        retry: false,
+      },
+    },
+  );
 
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [isAssignOpen, setIsAssignOpen] = useState(false);
@@ -105,7 +130,8 @@ export default function Users() {
 
   const handleSave = () => {
     if (editingUser) {
-      updateUser.mutate({ id: editingUser.id, data: formData }, {
+      const { entraObjectId: _omit, ...updateData } = formData;
+      updateUser.mutate({ id: editingUser.id, data: updateData }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
           setEditingUser(null);
@@ -113,12 +139,26 @@ export default function Users() {
         }
       });
     } else {
-      createUser.mutate({ data: { ...formData, status: formData.status as UserStatus } }, {
+      const { entraObjectId, ...rest } = formData;
+      createUser.mutate({
+        data: {
+          ...rest,
+          status: formData.status as UserStatus,
+          ...(entraObjectId ? { entraObjectId } : {}),
+        }
+      }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
           setIsCreateOpen(false);
-          setFormData({ name: "", email: "", status: "active" });
+          setFormData({ name: "", email: "", status: "active", entraObjectId: "" });
+          setEntraSearch("");
           toast({ title: "User created successfully" });
+        },
+        onError: (err: unknown) => {
+          const msg = err && typeof err === "object" && "error" in err
+            ? String((err as { error: unknown }).error)
+            : "Failed to create user";
+          toast({ title: msg, variant: "destructive" });
         }
       });
     }
@@ -155,7 +195,8 @@ export default function Users() {
           <p className="text-muted-foreground mt-1">Manage personnel and assign security roles.</p>
         </div>
         <Button onClick={() => {
-          setFormData({ name: "", email: "", status: "active" });
+          setFormData({ name: "", email: "", status: "active", entraObjectId: "" });
+          setEntraSearch("");
           setIsCreateOpen(true);
         }}>
           <Plus className="h-4 w-4 mr-2" />
@@ -269,7 +310,7 @@ export default function Users() {
                     <DropdownMenuContent align="end" className="w-[200px]">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => {
-                        setFormData({ name: user.name, email: user.email, status: user.status as UserStatus });
+                        setFormData({ name: user.name, email: user.email, status: user.status as UserStatus, entraObjectId: user.entraObjectId ?? "" });
                         setEditingUser(user);
                       }}>
                         <Edit2 className="h-4 w-4 mr-2" /> Edit User
@@ -364,6 +405,70 @@ export default function Users() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {!editingUser && (
+              <div className="grid gap-2">
+                <Label htmlFor="entra-search">Search Azure Entra Directory</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="entra-search"
+                    placeholder="Search by name or email..."
+                    className="pl-9"
+                    value={entraSearch}
+                    onChange={(e) => setEntraSearch(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                {entraQueryEnabled && (
+                  <div className="rounded-md border max-h-48 overflow-y-auto divide-y">
+                    {entraSearching ? (
+                      <div className="p-3 text-sm text-muted-foreground">Searching directory...</div>
+                    ) : entraError ? (
+                      <div className="p-3 text-sm text-destructive">
+                        {(() => {
+                          const e = entraError as { data?: { error?: unknown } | null; message?: string };
+                          if (e?.data && typeof e.data === "object" && typeof e.data.error === "string") return e.data.error;
+                          if (typeof e?.message === "string" && e.message) return e.message;
+                          return "Directory search failed";
+                        })()}
+                      </div>
+                    ) : entraResults?.length === 0 ? (
+                      <div className="p-3 text-sm text-muted-foreground">No matching directory users.</div>
+                    ) : (
+                      entraResults?.map((u) => (
+                        <button
+                          key={u.objectId}
+                          type="button"
+                          className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
+                          onClick={() => {
+                            setFormData({
+                              name: u.displayName,
+                              email: u.email,
+                              status: u.accountEnabled ? "active" : "disabled",
+                              entraObjectId: u.objectId,
+                            });
+                            setEntraSearch("");
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-medium">{u.displayName}</div>
+                              <div className="text-xs text-muted-foreground">{u.email}</div>
+                            </div>
+                            <Badge variant={u.accountEnabled ? "default" : "secondary"} className={u.accountEnabled ? "bg-green-500/10 text-green-600 hover:bg-green-500/20" : ""}>
+                              {u.accountEnabled ? "active" : "disabled"}
+                            </Badge>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Select a directory user to fill the fields below, or enter details manually.
+                </p>
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="name">Full Name</Label>
               <Input id="name" value={formData.name} onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} />
@@ -371,6 +476,17 @@ export default function Users() {
             <div className="grid gap-2">
               <Label htmlFor="email">Email Address</Label>
               <Input id="email" type="email" value={formData.email} onChange={e => setFormData(f => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="entra-object-id">Entra Object ID</Label>
+              <Input
+                id="entra-object-id"
+                value={formData.entraObjectId}
+                readOnly={!editingUser}
+                disabled={!!editingUser}
+                placeholder="Filled automatically when selecting a directory user"
+                className="font-mono text-xs"
+              />
             </div>
             {editingUser && (
               <div className="flex items-center justify-between rounded-lg border p-3">

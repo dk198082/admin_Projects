@@ -65,15 +65,25 @@ router.post("/users", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { name, email, status, roleIds } = parsed.data;
+  const { name, email, status, entraObjectId, roleIds } = parsed.data;
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (existing.length > 0) {
     res.status(400).json({ error: "A user with this email already exists" });
     return;
   }
+  if (entraObjectId) {
+    const dup = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.entraObjectId, entraObjectId));
+    if (dup.length > 0) {
+      res.status(400).json({ error: "This Azure Entra user is already added" });
+      return;
+    }
+  }
   const [user] = await db
     .insert(usersTable)
-    .values({ name, email, status: status ?? "active" })
+    .values({ name, email, status: status ?? "active", entraObjectId: entraObjectId ?? null })
     .returning();
   if (roleIds && roleIds.length > 0) {
     const validRoles = await db
@@ -109,9 +119,13 @@ router.patch("/users/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const updateData = { ...parsed.data };
+  if (updateData.entraObjectId !== undefined && updateData.entraObjectId.trim() === "") {
+    delete updateData.entraObjectId;
+  }
   const [user] = await db
     .update(usersTable)
-    .set(parsed.data)
+    .set(updateData)
     .where(eq(usersTable.id, params.data.id))
     .returning();
   if (!user) {

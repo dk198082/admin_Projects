@@ -28,6 +28,7 @@ import type {
   BulkRoleAssignmentInput,
   BulkRoleAssignmentResult,
   CreateRoleInput,
+  EntraUser,
   ErrorMessage,
   HealthStatus,
   ListAccessGrantsParams,
@@ -38,6 +39,7 @@ import type {
   Role,
   RoleAssignment,
   RoleAssignmentInput,
+  SearchEntraUsersParams,
   SecurityPolicy,
   SecurityPolicyUpdate,
   Summary,
@@ -517,6 +519,90 @@ export const useDeleteUser = <TError = ErrorType<ErrorMessage>,
       > => {
       return useMutation(getDeleteUserMutationOptions(options));
     }
+
+export const getSearchEntraUsersUrl = (params: SearchEntraUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/entra/users?${stringifiedParams}` : `/api/entra/users`
+}
+
+/**
+ * @summary Search Azure Entra ID directory users by name or email
+ */
+export const searchEntraUsers = async (params: SearchEntraUsersParams, options?: RequestInit): Promise<EntraUser[]> => {
+
+  return customFetch<EntraUser[]>(getSearchEntraUsersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchEntraUsersQueryKey = (params?: SearchEntraUsersParams,) => {
+    return [
+    `/api/entra/users`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchEntraUsersQueryOptions = <TData = Awaited<ReturnType<typeof searchEntraUsers>>, TError = ErrorType<ErrorMessage>>(params: SearchEntraUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchEntraUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchEntraUsersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchEntraUsers>>> = ({ signal }) => searchEntraUsers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchEntraUsers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchEntraUsersQueryResult = NonNullable<Awaited<ReturnType<typeof searchEntraUsers>>>
+export type SearchEntraUsersQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Search Azure Entra ID directory users by name or email
+ */
+
+export function useSearchEntraUsers<TData = Awaited<ReturnType<typeof searchEntraUsers>>, TError = ErrorType<ErrorMessage>>(
+ params: SearchEntraUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchEntraUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchEntraUsersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListRolesUrl = () => {
 
