@@ -6,13 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accessCheckPermission';
+export * from './accessCheckResult';
 export * from './accessGrant';
 export * from './accessGrantInput';
 export * from './accessGrantUpdate';
+export * from './apiKeySummary';
 export * from './app';
 export * from './auditEntry';
+export * from './bulkImportUserInput';
+export * from './bulkImportUserInputStatus';
+export * from './bulkImportUsersInput';
+export * from './bulkImportUsersResult';
 export * from './bulkRoleAssignmentInput';
 export * from './bulkRoleAssignmentResult';
+export * from './checkAccessParams';
+export * from './createApiKeyInput';
+export * from './createdApiKey';
 export * from './createRoleInput';
 export * from './entraSignIn';
 export * from './entraUser';

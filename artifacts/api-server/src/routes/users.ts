@@ -7,6 +7,8 @@ import {
   roleAssignmentsTable,
 } from "@workspace/db";
 import {
+  BulkImportUsersBody,
+  BulkImportUsersResponse,
   CreateUserBody,
   CreateUserResponse,
   UpdateUserParams,
@@ -106,6 +108,83 @@ router.post("/users", async (req, res): Promise<void> => {
   await logAudit("create", "User", `Created user ${name} (${email})`, req.session.user?.name);
   const full = await userWithRoles(user.id);
   res.status(201).json(CreateUserResponse.parse(full));
+});
+
+router.post("/users/bulk-import", async (req, res): Promise<void> => {
+  const parsed = BulkImportUsersBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { users, roleIds } = parsed.data;
+
+  if (roleIds && roleIds.length > 0) {
+    const validRoles = await db.select().from(rolesTable).where(inArray(rolesTable.id, roleIds));
+    if (validRoles.length !== roleIds.length) {
+      res.status(400).json({ error: "One or more roles do not exist" });
+      return;
+    }
+  }
+
+  const existing = await db
+    .select({ email: usersTable.email, entraObjectId: usersTable.entraObjectId })
+    .from(usersTable);
+  const existingEmails = new Set(existing.map((u) => u.email.toLowerCase()));
+  const existingEntraIds = new Set(
+    existing.map((u) => u.entraObjectId).filter((v): v is string => !!v),
+  );
+
+  let created = 0;
+  let skipped = 0;
+  let assignedRoles = 0;
+  const createdNames: string[] = [];
+
+  await db.transaction(async (tx) => {
+    for (const u of users) {
+      const emailLower = u.email.toLowerCase();
+      if (existingEmails.has(emailLower) || (u.entraObjectId && existingEntraIds.has(u.entraObjectId))) {
+        skipped++;
+        continue;
+      }
+      const [inserted] = await tx
+        .insert(usersTable)
+        .values({
+          name: u.name,
+          email: u.email,
+          status: u.status ?? "active",
+          entraObjectId: u.entraObjectId ?? null,
+        })
+        .onConflictDoNothing()
+        .returning();
+      if (!inserted) {
+        skipped++;
+        continue;
+      }
+      existingEmails.add(emailLower);
+      if (u.entraObjectId) existingEntraIds.add(u.entraObjectId);
+      created++;
+      createdNames.push(inserted.name);
+      if (roleIds && roleIds.length > 0) {
+        const result = await tx
+          .insert(roleAssignmentsTable)
+          .values(roleIds.map((roleId) => ({ userId: inserted.id, roleId })))
+          .onConflictDoNothing()
+          .returning();
+        assignedRoles += result.length;
+      }
+    }
+  });
+
+  if (created > 0) {
+    await logAudit(
+      "create",
+      "User",
+      `Bulk imported ${created} user(s)${skipped ? ` (${skipped} skipped as existing)` : ""}${assignedRoles ? `, ${assignedRoles} role assignment(s)` : ""}: ${createdNames.slice(0, 10).join(", ")}${createdNames.length > 10 ? "..." : ""}`,
+      req.session.user?.name,
+    );
+  }
+
+  res.json(BulkImportUsersResponse.parse({ created, skipped, assignedRoles }));
 });
 
 router.patch("/users/:id", async (req, res): Promise<void> => {

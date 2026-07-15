@@ -39,7 +39,9 @@ Role-based security administration for two internal apps ("Production Shop Floor
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Admin Console: users (with Entra directory search + bulk import), roles, permission matrix, security policies, audit log (admin activity + Entra sign-ins), sync error log.
+- External access enforcement: `GET /api/access-check?entraObjectId=&app=` with `X-API-Key` header (key scoped to one app; sha256-hashed in `api_keys`). Apps call it at login; responds allowed/denied + roles + best permission level per resource. API keys managed on Security page (secret shown once).
+- Sign-in log requires Entra ID P1 license (tenant currently lacks it; UI shows guidance).
 
 ## User preferences
 

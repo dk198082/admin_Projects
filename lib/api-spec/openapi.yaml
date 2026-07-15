@@ -24,6 +24,8 @@ tags:
     description: Audit log
   - name: sync
     description: Data sync error log
+  - name: access
+    description: External access-check API and API keys
 paths:
   /healthz:
     get:
@@ -534,6 +536,113 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SyncEntityCount"
+  /access-check:
+    get:
+      operationId: checkAccess
+      tags: [access]
+      summary: Check whether an Entra user may access an app (API-key protected, for external apps)
+      parameters:
+        - name: entraObjectId
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: app
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Access decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessCheckResult"
+        "401":
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /api-keys:
+    get:
+      operationId: listApiKeys
+      tags: [access]
+      summary: List API keys (without secrets)
+      responses:
+        "200":
+          description: API keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKeySummary"
+    post:
+      operationId: createApiKey
+      tags: [access]
+      summary: Create a new API key (secret returned once)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyInput"
+      responses:
+        "201":
+          description: Created key including one-time secret
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedApiKey"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /api-keys/{id}:
+    delete:
+      operationId: revokeApiKey
+      tags: [access]
+      summary: Revoke an API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /users/bulk-import:
+    post:
+      operationId: bulkImportUsers
+      tags: [users]
+      summary: Bulk import users (e.g. from the Entra directory) with optional role assignments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkImportUsersInput"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkImportUsersResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
   schemas:
     HealthStatus:
@@ -633,6 +742,81 @@ components:
         displayName: { type: string }
         email: { type: string }
         accountEnabled: { type: boolean }
+    AccessCheckPermission:
+      type: object
+      required: [resource, level]
+      properties:
+        resource: { type: string }
+        level: { type: string }
+    AccessCheckResult:
+      type: object
+      required: [allowed, roles, permissions]
+      properties:
+        allowed: { type: boolean }
+        reason: { type: string, nullable: true }
+        userName: { type: string, nullable: true }
+        status: { type: string, nullable: true }
+        roles:
+          type: array
+          items: { type: string }
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessCheckPermission"
+    ApiKeySummary:
+      type: object
+      required: [id, appName, label, keyPrefix, createdAt, revoked]
+      properties:
+        id: { type: integer }
+        appName: { type: string }
+        label: { type: string }
+        keyPrefix: { type: string }
+        createdAt: { type: string }
+        revoked: { type: boolean }
+        lastUsedAt: { type: string, nullable: true }
+    CreateApiKeyInput:
+      type: object
+      required: [appName]
+      properties:
+        appName: { type: string, minLength: 1 }
+        label: { type: string }
+    CreatedApiKey:
+      type: object
+      required: [id, appName, label, keyPrefix, createdAt, key]
+      properties:
+        id: { type: integer }
+        appName: { type: string }
+        label: { type: string }
+        keyPrefix: { type: string }
+        createdAt: { type: string }
+        key: { type: string }
+    BulkImportUserInput:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string, minLength: 3 }
+        entraObjectId: { type: string }
+        status: { type: string, enum: [active, disabled] }
+    BulkImportUsersInput:
+      type: object
+      required: [users]
+      properties:
+        users:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/BulkImportUserInput"
+        roleIds:
+          type: array
+          items: { type: integer }
+    BulkImportUsersResult:
+      type: object
+      required: [created, skipped, assignedRoles]
+      properties:
+        created: { type: integer }
+        skipped: { type: integer }
+        assignedRoles: { type: integer }
     EntraSignIn:
       type: object
       required: [id, userDisplayName, userPrincipalName, appDisplayName, createdDateTime, success]

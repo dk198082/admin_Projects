@@ -8,3 +8,6 @@ description: Two recurring gotchas when wiring Express + Drizzle + generated Zod
 
 **Why:** Both surfaced as opaque 500s/HTML stack traces during the Admin Console build.
 **How to apply:** Any new route returning timestamp columns or inserting FK references.
+
+## Orval query-param coercion pitfall
+Generated Zod query schemas use `zod.coerce.string()`, so a missing query param coerces `undefined` → the string "undefined" and passes `.min(1)`. For required query params, pre-check `typeof req.query.x === "string" && x.trim() !== ""` before safeParse, or missing params silently pass validation.

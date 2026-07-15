@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SecurityPolicy } from "@workspace/api-client-react";
+import ApiKeysSection from "@/components/ApiKeysSection";
 
 export default function Security() {
   const queryClient = useQueryClient();
@@ -201,6 +202,8 @@ export default function Security() {
           );
         })}
       </Tabs>
+
+      <ApiKeysSection />
     </div>
   );
 }

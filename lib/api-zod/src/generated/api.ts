@@ -469,3 +469,100 @@ export const ListSyncEntitiesResponseItem = zod.object({
 export const ListSyncEntitiesResponse = zod.array(ListSyncEntitiesResponseItem)
 
 
+/**
+ * @summary Check whether an Entra user may access an app (API-key protected, for external apps)
+ */
+
+
+
+
+export const CheckAccessQueryParams = zod.object({
+  "entraObjectId": zod.coerce.string().min(1),
+  "app": zod.coerce.string().min(1)
+})
+
+export const CheckAccessResponse = zod.object({
+  "allowed": zod.boolean(),
+  "reason": zod.string().nullish(),
+  "userName": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "roles": zod.array(zod.string()),
+  "permissions": zod.array(zod.object({
+  "resource": zod.string(),
+  "level": zod.string()
+}))
+})
+
+
+/**
+ * @summary List API keys (without secrets)
+ */
+export const ListApiKeysResponseItem = zod.object({
+  "id": zod.number(),
+  "appName": zod.string(),
+  "label": zod.string(),
+  "keyPrefix": zod.string(),
+  "createdAt": zod.string(),
+  "revoked": zod.boolean(),
+  "lastUsedAt": zod.string().nullish()
+})
+export const ListApiKeysResponse = zod.array(ListApiKeysResponseItem)
+
+
+/**
+ * @summary Create a new API key (secret returned once)
+ */
+
+
+
+export const CreateApiKeyBody = zod.object({
+  "appName": zod.string().min(1),
+  "label": zod.string().optional()
+})
+
+export const CreateApiKeyResponse = zod.object({
+  "id": zod.number(),
+  "appName": zod.string(),
+  "label": zod.string(),
+  "keyPrefix": zod.string(),
+  "createdAt": zod.string(),
+  "key": zod.string()
+})
+
+
+/**
+ * @summary Revoke an API key
+ */
+export const RevokeApiKeyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RevokeApiKeyResponse = zod.void()
+
+
+/**
+ * @summary Bulk import users (e.g. from the Entra directory) with optional role assignments
+ */
+
+export const bulkImportUsersBodyUsersItemEmailMin = 3;
+
+
+
+
+export const BulkImportUsersBody = zod.object({
+  "users": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "email": zod.string().min(bulkImportUsersBodyUsersItemEmailMin),
+  "entraObjectId": zod.string().optional(),
+  "status": zod.enum(['active', 'disabled']).optional()
+})).min(1),
+  "roleIds": zod.array(zod.number()).optional()
+})
+
+export const BulkImportUsersResponse = zod.object({
+  "created": zod.number(),
+  "skipped": zod.number(),
+  "assignedRoles": zod.number()
+})
+
+

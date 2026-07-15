@@ -118,6 +118,74 @@ export interface EntraUser {
   accountEnabled: boolean;
 }
 
+export interface AccessCheckPermission {
+  resource: string;
+  level: string;
+}
+
+export interface AccessCheckResult {
+  allowed: boolean;
+  reason?: string | null;
+  userName?: string | null;
+  status?: string | null;
+  roles: string[];
+  permissions: AccessCheckPermission[];
+}
+
+export interface ApiKeySummary {
+  id: number;
+  appName: string;
+  label: string;
+  keyPrefix: string;
+  createdAt: string;
+  revoked: boolean;
+  lastUsedAt?: string | null;
+}
+
+export interface CreateApiKeyInput {
+  /** @minLength 1 */
+  appName: string;
+  label?: string;
+}
+
+export interface CreatedApiKey {
+  id: number;
+  appName: string;
+  label: string;
+  keyPrefix: string;
+  createdAt: string;
+  key: string;
+}
+
+export type BulkImportUserInputStatus = typeof BulkImportUserInputStatus[keyof typeof BulkImportUserInputStatus];
+
+
+export const BulkImportUserInputStatus = {
+  active: 'active',
+  disabled: 'disabled',
+} as const;
+
+export interface BulkImportUserInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 3 */
+  email: string;
+  entraObjectId?: string;
+  status?: BulkImportUserInputStatus;
+}
+
+export interface BulkImportUsersInput {
+  /** @minItems 1 */
+  users: BulkImportUserInput[];
+  roleIds?: number[];
+}
+
+export interface BulkImportUsersResult {
+  created: number;
+  skipped: number;
+  assignedRoles: number;
+}
+
 export interface EntraSignIn {
   id: string;
   userDisplayName: string;
@@ -275,5 +343,16 @@ export type ListSyncErrorsParams = {
 limit?: number;
 search?: string;
 entity?: string;
+};
+
+export type CheckAccessParams = {
+/**
+ * @minLength 1
+ */
+entraObjectId: string;
+/**
+ * @minLength 1
+ */
+app: string;
 };
 

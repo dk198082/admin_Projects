@@ -20,14 +20,21 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccessCheckResult,
   AccessGrant,
   AccessGrantInput,
   AccessGrantUpdate,
+  ApiKeySummary,
   App,
   AuditEntry,
+  BulkImportUsersInput,
+  BulkImportUsersResult,
   BulkRoleAssignmentInput,
   BulkRoleAssignmentResult,
+  CheckAccessParams,
+  CreateApiKeyInput,
   CreateRoleInput,
+  CreatedApiKey,
   EntraSignIn,
   EntraUser,
   ErrorMessage,
@@ -1972,4 +1979,375 @@ export function useListSyncEntities<TData = Awaited<ReturnType<typeof listSyncEn
 
 
 
+
+export const getCheckAccessUrl = (params: CheckAccessParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/access-check?${stringifiedParams}` : `/api/access-check`
+}
+
+/**
+ * @summary Check whether an Entra user may access an app (API-key protected, for external apps)
+ */
+export const checkAccess = async (params: CheckAccessParams, options?: RequestInit): Promise<AccessCheckResult> => {
+
+  return customFetch<AccessCheckResult>(getCheckAccessUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckAccessQueryKey = (params?: CheckAccessParams,) => {
+    return [
+    `/api/access-check`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getCheckAccessQueryOptions = <TData = Awaited<ReturnType<typeof checkAccess>>, TError = ErrorType<ErrorMessage>>(params: CheckAccessParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckAccessQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkAccess>>> = ({ signal }) => checkAccess(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CheckAccessQueryResult = NonNullable<Awaited<ReturnType<typeof checkAccess>>>
+export type CheckAccessQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Check whether an Entra user may access an app (API-key protected, for external apps)
+ */
+
+export function useCheckAccess<TData = Awaited<ReturnType<typeof checkAccess>>, TError = ErrorType<ErrorMessage>>(
+ params: CheckAccessParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCheckAccessQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListApiKeysUrl = () => {
+
+
+
+
+  return `/api/api-keys`
+}
+
+/**
+ * @summary List API keys (without secrets)
+ */
+export const listApiKeys = async ( options?: RequestInit): Promise<ApiKeySummary[]> => {
+
+  return customFetch<ApiKeySummary[]>(getListApiKeysUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListApiKeysQueryKey = () => {
+    return [
+    `/api/api-keys`
+    ] as const;
+    }
+
+
+export const getListApiKeysQueryOptions = <TData = Awaited<ReturnType<typeof listApiKeys>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListApiKeysQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApiKeys>>> = ({ signal }) => listApiKeys({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListApiKeysQueryResult = NonNullable<Awaited<ReturnType<typeof listApiKeys>>>
+export type ListApiKeysQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List API keys (without secrets)
+ */
+
+export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListApiKeysQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateApiKeyUrl = () => {
+
+
+
+
+  return `/api/api-keys`
+}
+
+/**
+ * @summary Create a new API key (secret returned once)
+ */
+export const createApiKey = async (createApiKeyInput: CreateApiKeyInput, options?: RequestInit): Promise<CreatedApiKey> => {
+
+  return customFetch<CreatedApiKey>(getCreateApiKeyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createApiKeyInput)
+  }
+);}
+
+
+
+
+export const getCreateApiKeyMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,{data: BodyType<CreateApiKeyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,{data: BodyType<CreateApiKeyInput>}, TContext> => {
+
+const mutationKey = ['createApiKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApiKey>>, {data: BodyType<CreateApiKeyInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createApiKey(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof createApiKey>>>
+    export type CreateApiKeyMutationBody = BodyType<CreateApiKeyInput>
+    export type CreateApiKeyMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Create a new API key (secret returned once)
+ */
+export const useCreateApiKey = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,{data: BodyType<CreateApiKeyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createApiKey>>,
+        TError,
+        {data: BodyType<CreateApiKeyInput>},
+        TContext
+      > => {
+      return useMutation(getCreateApiKeyMutationOptions(options));
+    }
+
+export const getRevokeApiKeyUrl = (id: number,) => {
+
+
+
+
+  return `/api/api-keys/${id}`
+}
+
+/**
+ * @summary Revoke an API key
+ */
+export const revokeApiKey = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRevokeApiKeyUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeApiKeyMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeApiKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeApiKey>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeApiKey(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof revokeApiKey>>>
+
+    export type RevokeApiKeyMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Revoke an API key
+ */
+export const useRevokeApiKey = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeApiKey>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeApiKeyMutationOptions(options));
+    }
+
+export const getBulkImportUsersUrl = () => {
+
+
+
+
+  return `/api/users/bulk-import`
+}
+
+/**
+ * @summary Bulk import users (e.g. from the Entra directory) with optional role assignments
+ */
+export const bulkImportUsers = async (bulkImportUsersInput: BulkImportUsersInput, options?: RequestInit): Promise<BulkImportUsersResult> => {
+
+  return customFetch<BulkImportUsersResult>(getBulkImportUsersUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkImportUsersInput)
+  }
+);}
+
+
+
+
+export const getBulkImportUsersMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportUsers>>, TError,{data: BodyType<BulkImportUsersInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkImportUsers>>, TError,{data: BodyType<BulkImportUsersInput>}, TContext> => {
+
+const mutationKey = ['bulkImportUsers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkImportUsers>>, {data: BodyType<BulkImportUsersInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkImportUsers(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkImportUsersMutationResult = NonNullable<Awaited<ReturnType<typeof bulkImportUsers>>>
+    export type BulkImportUsersMutationBody = BodyType<BulkImportUsersInput>
+    export type BulkImportUsersMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Bulk import users (e.g. from the Entra directory) with optional role assignments
+ */
+export const useBulkImportUsers = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportUsers>>, TError,{data: BodyType<BulkImportUsersInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkImportUsers>>,
+        TError,
+        {data: BodyType<BulkImportUsersInput>},
+        TContext
+      > => {
+      return useMutation(getBulkImportUsersMutationOptions(options));
+    }
 

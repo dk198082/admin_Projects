@@ -15,7 +15,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Search, MoreVertical, Shield, Trash2, Edit2, Check, X, Key } from "lucide-react";
+import { Plus, Search, MoreVertical, Shield, Trash2, Edit2, Check, X, Key, DownloadCloud } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { User, UserStatus } from "@workspace/api-client-react";
+import ImportEntraUsersDialog from "@/components/ImportEntraUsersDialog";
 
 export default function Users() {
   const queryClient = useQueryClient();
@@ -56,6 +57,7 @@ export default function Users() {
   const bulkAssign = useBulkCreateRoleAssignments();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
   const [formData, setFormData] = useState({ name: "", email: "", status: "active" as UserStatus, entraObjectId: "" });
@@ -194,15 +196,23 @@ export default function Users() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Users</h1>
           <p className="text-muted-foreground mt-1">Manage personnel and assign security roles.</p>
         </div>
-        <Button onClick={() => {
-          setFormData({ name: "", email: "", status: "active", entraObjectId: "" });
-          setEntraSearch("");
-          setIsCreateOpen(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          New User
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+            <DownloadCloud className="h-4 w-4 mr-2" />
+            Import from Entra
+          </Button>
+          <Button onClick={() => {
+            setFormData({ name: "", email: "", status: "active", entraObjectId: "" });
+            setEntraSearch("");
+            setIsCreateOpen(true);
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            New User
+          </Button>
+        </div>
       </div>
+
+      <ImportEntraUsersDialog open={isImportOpen} onOpenChange={setIsImportOpen} roles={roles} />
 
       <div className="border rounded-md bg-card overflow-hidden shadow-sm">
         <div className="p-4 border-b border-border/50 bg-muted/20 flex items-center justify-between gap-4">

@@ -7,3 +7,4 @@ export * from "./accessGrants";
 export * from "./securityPolicies";
 export * from "./auditLog";
 export * from "./appUsers";
+export * from "./apiKeys";

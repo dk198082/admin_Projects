@@ -9,13 +9,17 @@ import auditRouter from "./audit";
 import syncRouter from "./sync";
 import entraRouter from "./entra";
 import authRouter from "./auth";
+import accessCheckRouter from "./accessCheck";
+import apiKeysRouter from "./apiKeys";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(accessCheckRouter);
 router.use(requireAuth);
+router.use(apiKeysRouter);
 router.use(usersRouter);
 router.use(rolesRouter);
 router.use(appsResourcesRouter);
