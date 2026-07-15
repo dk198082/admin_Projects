@@ -107,8 +107,13 @@ export async function getSignInLogs(app?: string): Promise<GraphSignIn[]> {
     error?: { code?: string; message?: string };
   };
   if (res.status === 403) {
+    if (data.error?.code === "Authentication_RequestFromNonPremiumTenantOrB2CTenant") {
+      throw new GraphPermissionError(
+        "Reading Entra sign-in logs requires a Microsoft Entra ID P1 or P2 (premium) license on the tenant. The permission is granted, but Microsoft blocks this API for tenants without a premium license.",
+      );
+    }
     throw new GraphPermissionError(
-      "The Azure app registration is missing the Microsoft Graph 'AuditLog.Read.All' (and 'Directory.Read.All') application permission with admin consent, which is required to read sign-in logs.",
+      "The Azure app registration is missing the Microsoft Graph 'AuditLog.Read.All' application permission with admin consent, which is required to read sign-in logs.",
     );
   }
   if (!res.ok) {
