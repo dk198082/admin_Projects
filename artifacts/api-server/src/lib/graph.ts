@@ -79,3 +79,40 @@ export async function searchDirectoryUsers(query: string): Promise<GraphUser[]> 
   }
   return data.value ?? [];
 }
+
+export interface GraphSignIn {
+  id: string;
+  userDisplayName: string | null;
+  userPrincipalName: string | null;
+  appDisplayName: string | null;
+  createdDateTime: string;
+  ipAddress: string | null;
+  status: { errorCode: number | null; failureReason: string | null } | null;
+}
+
+export async function getSignInLogs(app?: string): Promise<GraphSignIn[]> {
+  const token = await getGraphToken();
+  const params = new URLSearchParams({
+    $top: "50",
+    $orderby: "createdDateTime desc",
+  });
+  if (app) {
+    const escaped = app.replace(/'/g, "''");
+    params.set("$filter", `startswith(appDisplayName,'${escaped}')`);
+  }
+  const url = `https://graph.microsoft.com/v1.0/auditLogs/signIns?${params.toString()}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const data = (await res.json()) as {
+    value?: GraphSignIn[];
+    error?: { code?: string; message?: string };
+  };
+  if (res.status === 403) {
+    throw new GraphPermissionError(
+      "The Azure app registration is missing the Microsoft Graph 'AuditLog.Read.All' (and 'Directory.Read.All') application permission with admin consent, which is required to read sign-in logs.",
+    );
+  }
+  if (!res.ok) {
+    throw new Error(`Graph sign-in log query failed (${res.status}): ${data.error?.message ?? ""}`);
+  }
+  return data.value ?? [];
+}

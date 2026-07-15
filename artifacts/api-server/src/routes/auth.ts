@@ -108,8 +108,15 @@ router.get("/auth/me", (req, res) => {
   res.json(req.session.user);
 });
 
-router.post("/auth/logout", (req, res) => {
+router.post("/auth/logout", async (req, res) => {
   const name = req.session.user?.name;
+  if (name) {
+    try {
+      await logAudit("logout", "Session", `${name} signed out`, name);
+    } catch (err) {
+      req.log.error({ err }, "Failed to write logout audit entry");
+    }
+  }
   req.session.destroy(() => {
     res.json({ ok: true, loggedOutUser: name ?? null });
   });

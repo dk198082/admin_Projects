@@ -100,10 +100,10 @@ router.post("/users", async (req, res): Promise<void> => {
       .values(roleIds.map((roleId) => ({ userId: user.id, roleId })))
       .onConflictDoNothing();
     for (const role of validRoles) {
-      await logAudit("assign", "Role", `Assigned role ${role.name} to ${name}`);
+      await logAudit("assign", "Role", `Assigned role ${role.name} to ${name}`, req.session.user?.name);
     }
   }
-  await logAudit("create", "User", `Created user ${name} (${email})`);
+  await logAudit("create", "User", `Created user ${name} (${email})`, req.session.user?.name);
   const full = await userWithRoles(user.id);
   res.status(201).json(CreateUserResponse.parse(full));
 });
@@ -132,7 +132,7 @@ router.patch("/users/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "User not found" });
     return;
   }
-  await logAudit("update", "User", `Updated user ${user.name}`);
+  await logAudit("update", "User", `Updated user ${user.name}`, req.session.user?.name);
   const full = await userWithRoles(user.id);
   res.json(UpdateUserResponse.parse(full));
 });
@@ -151,7 +151,7 @@ router.delete("/users/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "User not found" });
     return;
   }
-  await logAudit("delete", "User", `Deleted user ${user.name} (${user.email})`);
+  await logAudit("delete", "User", `Deleted user ${user.name} (${user.email})`, req.session.user?.name);
   res.sendStatus(204);
 });
 

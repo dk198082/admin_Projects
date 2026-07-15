@@ -79,6 +79,7 @@ router.post("/access-grants", async (req, res): Promise<void> => {
     "grant",
     "Permission",
     `Granted ${row.level} on ${row.appName} / ${row.resourceName} to ${row.roleName}`,
+    req.session.user?.name,
   );
   res.status(201).json(CreateAccessGrantResponse.parse(row));
 });
@@ -108,6 +109,7 @@ router.patch("/access-grants/:id", async (req, res): Promise<void> => {
     "update",
     "Permission",
     `Changed ${row.roleName} access on ${row.appName} / ${row.resourceName} to ${row.level}`,
+    req.session.user?.name,
   );
   res.json(UpdateAccessGrantResponse.parse(row));
 });
@@ -128,6 +130,7 @@ router.delete("/access-grants/:id", async (req, res): Promise<void> => {
     "revoke",
     "Permission",
     `Revoked ${row.roleName} access (${row.level}) on ${row.appName} / ${row.resourceName}`,
+    req.session.user?.name,
   );
   res.sendStatus(204);
 });

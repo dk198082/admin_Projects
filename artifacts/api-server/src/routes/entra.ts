@@ -1,6 +1,11 @@
 import { Router, type IRouter } from "express";
-import { SearchEntraUsersQueryParams, SearchEntraUsersResponse } from "@workspace/api-zod";
-import { searchDirectoryUsers, GraphPermissionError } from "../lib/graph";
+import {
+  SearchEntraUsersQueryParams,
+  SearchEntraUsersResponse,
+  ListEntraSignInsQueryParams,
+  ListEntraSignInsResponse,
+} from "@workspace/api-zod";
+import { searchDirectoryUsers, getSignInLogs, GraphPermissionError } from "../lib/graph";
 
 const router: IRouter = Router();
 
@@ -35,6 +40,41 @@ router.get("/entra/users", async (req, res): Promise<void> => {
     }
     req.log.error({ err }, "Entra directory search failed");
     res.status(502).json({ error: "Failed to search the Azure Entra directory" });
+  }
+});
+
+router.get("/entra/signins", async (req, res): Promise<void> => {
+  const query = ListEntraSignInsQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+  const app = query.data.app?.trim() || undefined;
+  try {
+    const signIns = await getSignInLogs(app);
+    res.json(
+      ListEntraSignInsResponse.parse(
+        signIns.map((s) => ({
+          id: s.id,
+          userDisplayName: s.userDisplayName ?? "",
+          userPrincipalName: s.userPrincipalName ?? "",
+          appDisplayName: s.appDisplayName ?? "",
+          createdDateTime: s.createdDateTime,
+          success: (s.status?.errorCode ?? 0) === 0,
+          failureReason:
+            (s.status?.errorCode ?? 0) === 0 ? null : s.status?.failureReason ?? null,
+          ipAddress: s.ipAddress ?? null,
+        })),
+      ),
+    );
+  } catch (err) {
+    if (err instanceof GraphPermissionError) {
+      req.log.warn({ err }, "Graph permission missing for sign-in logs");
+      res.status(502).json({ error: err.message });
+      return;
+    }
+    req.log.error({ err }, "Entra sign-in log query failed");
+    res.status(502).json({ error: "Failed to fetch Entra sign-in logs" });
   }
 });
 

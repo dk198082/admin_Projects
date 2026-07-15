@@ -54,7 +54,7 @@ router.post("/roles", async (req, res): Promise<void> => {
     res.status(400).json({ error: "A role with that name already exists" });
     return;
   }
-  await logAudit("create", "Role", `Created role ${inserted.name}`);
+  await logAudit("create", "Role", `Created role ${inserted.name}`, req.session.user?.name);
   res
     .status(201)
     .json(CreateRoleResponse.parse({ ...inserted, userCount: 0, grantCount: 0 }));
@@ -87,6 +87,7 @@ router.post("/role-assignments/bulk", async (req, res): Promise<void> => {
       "assign",
       "Role",
       `Bulk assigned role(s) ${roleNames} to user(s) ${userNames} (${inserted.length} new assignment(s))`,
+      req.session.user?.name,
     );
   }
   res.json(
@@ -146,7 +147,7 @@ router.post("/role-assignments", async (req, res): Promise<void> => {
     .innerJoin(usersTable, eq(roleAssignmentsTable.userId, usersTable.id))
     .innerJoin(rolesTable, eq(roleAssignmentsTable.roleId, rolesTable.id))
     .where(eq(roleAssignmentsTable.id, inserted.id));
-  await logAudit("assign", "Role", `Assigned role ${row.roleName} to ${row.userName}`);
+  await logAudit("assign", "Role", `Assigned role ${row.roleName} to ${row.userName}`, req.session.user?.name);
   res
     .status(201)
     .json(
@@ -174,7 +175,7 @@ router.delete("/role-assignments/:id", async (req, res): Promise<void> => {
     return;
   }
   await db.delete(roleAssignmentsTable).where(eq(roleAssignmentsTable.id, params.data.id));
-  await logAudit("revoke", "Role", `Removed role ${row.roleName} from ${row.userName}`);
+  await logAudit("revoke", "Role", `Removed role ${row.roleName} from ${row.userName}`, req.session.user?.name);
   res.sendStatus(204);
 });
 

@@ -55,7 +55,7 @@ router.patch("/security-policies/:id", async (req, res): Promise<void> => {
     return;
   }
   const [row] = await policySelect().where(eq(securityPoliciesTable.id, updated.id));
-  await logAudit("update", "Security Policy", `Updated security policy for ${row.appName}`);
+  await logAudit("update", "Security Policy", `Updated security policy for ${row.appName}`, req.session.user?.name);
   res.json(UpdateSecurityPolicyResponse.parse(row));
 });
 

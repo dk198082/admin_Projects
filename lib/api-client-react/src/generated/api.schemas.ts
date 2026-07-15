@@ -118,6 +118,17 @@ export interface EntraUser {
   accountEnabled: boolean;
 }
 
+export interface EntraSignIn {
+  id: string;
+  userDisplayName: string;
+  userPrincipalName: string;
+  appDisplayName: string;
+  createdDateTime: string;
+  success: boolean;
+  failureReason?: string | null;
+  ipAddress?: string | null;
+}
+
 export interface Role {
   id: number;
   name: string;
@@ -241,6 +252,10 @@ export type SearchEntraUsersParams = {
  * @minLength 2
  */
 query: string;
+};
+
+export type ListEntraSignInsParams = {
+app?: string;
 };
 
 export type ListResourcesParams = {
