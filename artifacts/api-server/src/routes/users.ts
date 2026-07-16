@@ -7,6 +7,8 @@ import {
   roleAssignmentsTable,
 } from "@workspace/db";
 import {
+  BulkDeleteUsersBody,
+  BulkDeleteUsersResponse,
   BulkImportUsersBody,
   BulkImportUsersResponse,
   CreateUserBody,
@@ -185,6 +187,29 @@ router.post("/users/bulk-import", async (req, res): Promise<void> => {
   }
 
   res.json(BulkImportUsersResponse.parse({ created, skipped, assignedRoles }));
+});
+
+router.post("/users/bulk-delete", async (req, res): Promise<void> => {
+  const parsed = BulkDeleteUsersBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const userIds = [...new Set(parsed.data.userIds)];
+  const deletedUsers = await db
+    .delete(usersTable)
+    .where(inArray(usersTable.id, userIds))
+    .returning({ name: usersTable.name, email: usersTable.email });
+  if (deletedUsers.length > 0) {
+    const names = deletedUsers.map((u) => u.name);
+    await logAudit(
+      "delete",
+      "User",
+      `Bulk deleted ${deletedUsers.length} user(s): ${names.slice(0, 10).join(", ")}${names.length > 10 ? "..." : ""}`,
+      req.session.user?.name,
+    );
+  }
+  res.json(BulkDeleteUsersResponse.parse({ deleted: deletedUsers.length }));
 });
 
 router.patch("/users/:id", async (req, res): Promise<void> => {

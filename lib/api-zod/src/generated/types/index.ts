@@ -15,6 +15,8 @@ export * from './apiKeySummary';
 export * from './app';
 export * from './appInput';
 export * from './auditEntry';
+export * from './bulkDeleteUsersInput';
+export * from './bulkDeleteUsersResult';
 export * from './bulkImportUserInput';
 export * from './bulkImportUserInputStatus';
 export * from './bulkImportUsersInput';

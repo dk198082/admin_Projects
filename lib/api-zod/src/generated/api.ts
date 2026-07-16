@@ -652,6 +652,21 @@ export const RevokeApiKeyResponse = zod.void()
 
 
 /**
+ * @summary Delete multiple users at once (role assignments are removed)
+ */
+
+
+
+export const BulkDeleteUsersBody = zod.object({
+  "userIds": zod.array(zod.number()).min(1)
+})
+
+export const BulkDeleteUsersResponse = zod.object({
+  "deleted": zod.number()
+})
+
+
+/**
  * @summary Bulk import users (e.g. from the Entra directory) with optional role assignments
  */
 

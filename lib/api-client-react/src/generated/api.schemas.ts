@@ -180,6 +180,15 @@ export interface BulkImportUsersInput {
   roleIds?: number[];
 }
 
+export interface BulkDeleteUsersInput {
+  /** @minItems 1 */
+  userIds: number[];
+}
+
+export interface BulkDeleteUsersResult {
+  deleted: number;
+}
+
 export interface BulkImportUsersResult {
   created: number;
   skipped: number;

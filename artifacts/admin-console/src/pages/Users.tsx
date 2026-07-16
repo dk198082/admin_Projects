@@ -10,6 +10,7 @@ import {
   useCreateRoleAssignment,
   useDeleteRoleAssignment,
   useBulkCreateRoleAssignments,
+  useBulkDeleteUsers,
   useSearchEntraUsers,
   getSearchEntraUsersQueryKey
 } from "@workspace/api-client-react";
@@ -59,6 +60,7 @@ export default function Users() {
   const createAssignment = useCreateRoleAssignment();
   const deleteAssignment = useDeleteRoleAssignment();
   const bulkAssign = useBulkCreateRoleAssignments();
+  const bulkDelete = useBulkDeleteUsers();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -125,6 +127,32 @@ export default function Users() {
           });
         },
         onError: () => toast({ title: "Failed to assign roles", variant: "destructive" }),
+      },
+    );
+  };
+
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const selectedUsers = users?.filter(u => selectedUserIds.has(u.id)) ?? [];
+  const selectedRoleAssignmentCount = selectedUsers.reduce((sum, u) => sum + u.roles.length, 0);
+
+  const handleBulkDelete = () => {
+    bulkDelete.mutate(
+      { data: { userIds: selectedUsers.map(u => u.id) } },
+      {
+        onSuccess: (result) => {
+          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListRolesQueryKey() });
+          setSelectedUserIds(new Set());
+          setIsBulkDeleteOpen(false);
+          toast({ title: `${result.deleted} user${result.deleted === 1 ? "" : "s"} deleted` });
+        },
+        onError: (err: unknown) => {
+          const msg = err && typeof err === "object" && "error" in err
+            ? String((err as { error: unknown }).error)
+            : "Failed to delete users";
+          toast({ title: msg, variant: "destructive" });
+          setIsBulkDeleteOpen(false);
+        },
       },
     );
   };
@@ -261,6 +289,14 @@ export default function Users() {
             >
               <Shield className="h-4 w-4 mr-2" />
               Assign Roles
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={selectedUserIds.size === 0}
+              onClick={() => setIsBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Selected
             </Button>
           </div>
         </div>
@@ -419,6 +455,53 @@ export default function Users() {
               onClick={handleDeleteUser}
             >
               {deleteUser.isPending ? "Deleting..." : "Delete User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={(o) => { if (!o) setIsBulkDeleteOpen(false); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selectedUsers.length} user{selectedUsers.length === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the following user{selectedUsers.length === 1 ? "" : "s"}
+              {selectedRoleAssignmentCount > 0
+                ? ` and ${selectedRoleAssignmentCount} role assignment${selectedRoleAssignmentCount === 1 ? "" : "s"}`
+                : " and any role assignments they have"}
+              , revoking their access to the connected apps. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-md border max-h-56 overflow-y-auto divide-y">
+            {selectedUsers.map((u) => (
+              <div key={u.id} className="flex items-center justify-between gap-2 p-2.5">
+                <div>
+                  <div className="text-sm font-medium">{u.name}</div>
+                  <div className="text-xs text-muted-foreground">{u.email}</div>
+                </div>
+                {u.roles.length > 0 && (
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {u.roles.length} role{u.roles.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={selectedUsers.length === 0 || bulkDelete.isPending}
+              onClick={handleBulkDelete}
+            >
+              {bulkDelete.isPending
+                ? "Deleting..."
+                : `Delete ${selectedUsers.length} User${selectedUsers.length === 1 ? "" : "s"}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

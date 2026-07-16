@@ -28,6 +28,8 @@ import type {
   App,
   AppInput,
   AuditEntry,
+  BulkDeleteUsersInput,
+  BulkDeleteUsersResult,
   BulkImportUsersInput,
   BulkImportUsersResult,
   BulkRoleAssignmentInput,
@@ -2704,6 +2706,76 @@ export const useRevokeApiKey = <TError = ErrorType<ErrorMessage>,
         TContext
       > => {
       return useMutation(getRevokeApiKeyMutationOptions(options));
+    }
+
+export const getBulkDeleteUsersUrl = () => {
+
+
+
+
+  return `/api/users/bulk-delete`
+}
+
+/**
+ * @summary Delete multiple users at once (role assignments are removed)
+ */
+export const bulkDeleteUsers = async (bulkDeleteUsersInput: BulkDeleteUsersInput, options?: RequestInit): Promise<BulkDeleteUsersResult> => {
+
+  return customFetch<BulkDeleteUsersResult>(getBulkDeleteUsersUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkDeleteUsersInput)
+  }
+);}
+
+
+
+
+export const getBulkDeleteUsersMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkDeleteUsers>>, TError,{data: BodyType<BulkDeleteUsersInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkDeleteUsers>>, TError,{data: BodyType<BulkDeleteUsersInput>}, TContext> => {
+
+const mutationKey = ['bulkDeleteUsers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkDeleteUsers>>, {data: BodyType<BulkDeleteUsersInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkDeleteUsers(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkDeleteUsersMutationResult = NonNullable<Awaited<ReturnType<typeof bulkDeleteUsers>>>
+    export type BulkDeleteUsersMutationBody = BodyType<BulkDeleteUsersInput>
+    export type BulkDeleteUsersMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Delete multiple users at once (role assignments are removed)
+ */
+export const useBulkDeleteUsers = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkDeleteUsers>>, TError,{data: BodyType<BulkDeleteUsersInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkDeleteUsers>>,
+        TError,
+        {data: BodyType<BulkDeleteUsersInput>},
+        TContext
+      > => {
+      return useMutation(getBulkDeleteUsersMutationOptions(options));
     }
 
 export const getBulkImportUsersUrl = () => {

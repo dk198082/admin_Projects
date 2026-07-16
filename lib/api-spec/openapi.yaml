@@ -771,6 +771,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /users/bulk-delete:
+    post:
+      operationId: bulkDeleteUsers
+      tags: [users]
+      summary: Delete multiple users at once (role assignments are removed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteUsersInput"
+      responses:
+        "200":
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkDeleteUsersResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /users/bulk-import:
     post:
       operationId: bulkImportUsers
@@ -962,6 +986,19 @@ components:
         roleIds:
           type: array
           items: { type: integer }
+    BulkDeleteUsersInput:
+      type: object
+      required: [userIds]
+      properties:
+        userIds:
+          type: array
+          minItems: 1
+          items: { type: integer }
+    BulkDeleteUsersResult:
+      type: object
+      required: [deleted]
+      properties:
+        deleted: { type: integer }
     BulkImportUsersResult:
       type: object
       required: [created, skipped, assignedRoles]
