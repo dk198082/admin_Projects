@@ -40,6 +40,7 @@ Role-based security administration for two internal apps ("Production Shop Floor
 ## Product
 
 - Admin Console: users (with Entra directory search + bulk import), roles, permission matrix, security policies, audit log (admin activity + Entra sign-ins), sync error log.
+- App onboarding: Add App (auto-creates default security policy) + per-app Manage Resources (Tab/Form/Table) on the Permissions page. App rename syncs api_keys.app_name; app delete removes API keys + FK-cascades resources/grants/policy. Case-insensitive unique indexes: apps_name_lower_unique, resources_app_name_lower_unique (created in Azure PG + declared in Drizzle schema).
 - External access enforcement: `GET /api/access-check?entraObjectId=&app=` with `X-API-Key` header (key scoped to one app; sha256-hashed in `api_keys`). Apps call it at login; responds allowed/denied + roles + best permission level per resource. API keys managed on Security page (secret shown once).
 - Sign-in log requires Entra ID P1 license (tenant currently lacks it; UI shows guidance).
 

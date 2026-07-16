@@ -26,6 +26,7 @@ import type {
   AccessGrantUpdate,
   ApiKeySummary,
   App,
+  AppInput,
   AuditEntry,
   BulkImportUsersInput,
   BulkImportUsersResult,
@@ -45,6 +46,8 @@ import type {
   ListResourcesParams,
   ListSyncErrorsParams,
   Resource,
+  ResourceInput,
+  ResourceUpdate,
   Role,
   RoleAssignment,
   RoleAssignmentInput,
@@ -1208,6 +1211,287 @@ export function useListApps<TData = Awaited<ReturnType<typeof listApps>>, TError
 
 
 
+export const getCreateAppUrl = () => {
+
+
+
+
+  return `/api/apps`
+}
+
+/**
+ * @summary Onboard a new application (creates a default security policy)
+ */
+export const createApp = async (appInput: AppInput, options?: RequestInit): Promise<App> => {
+
+  return customFetch<App>(getCreateAppUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appInput)
+  }
+);}
+
+
+
+
+export const getCreateAppMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppInput>}, TContext> => {
+
+const mutationKey = ['createApp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApp>>, {data: BodyType<AppInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createApp(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAppMutationResult = NonNullable<Awaited<ReturnType<typeof createApp>>>
+    export type CreateAppMutationBody = BodyType<AppInput>
+    export type CreateAppMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Onboard a new application (creates a default security policy)
+ */
+export const useCreateApp = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createApp>>,
+        TError,
+        {data: BodyType<AppInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAppMutationOptions(options));
+    }
+
+export const getUpdateAppUrl = (id: number,) => {
+
+
+
+
+  return `/api/apps/${id}`
+}
+
+/**
+ * @summary Rename an application
+ */
+export const updateApp = async (id: number,
+    appInput: AppInput, options?: RequestInit): Promise<App> => {
+
+  return customFetch<App>(getUpdateAppUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appInput)
+  }
+);}
+
+
+
+
+export const getUpdateAppMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApp>>, TError,{id: number;data: BodyType<AppInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateApp>>, TError,{id: number;data: BodyType<AppInput>}, TContext> => {
+
+const mutationKey = ['updateApp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateApp>>, {id: number;data: BodyType<AppInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateApp(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAppMutationResult = NonNullable<Awaited<ReturnType<typeof updateApp>>>
+    export type UpdateAppMutationBody = BodyType<AppInput>
+    export type UpdateAppMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Rename an application
+ */
+export const useUpdateApp = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApp>>, TError,{id: number;data: BodyType<AppInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateApp>>,
+        TError,
+        {id: number;data: BodyType<AppInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAppMutationOptions(options));
+    }
+
+export const getDeleteAppUrl = (id: number,) => {
+
+
+
+
+  return `/api/apps/${id}`
+}
+
+/**
+ * @summary Delete an application and its resources, grants, policy, and API keys
+ */
+export const deleteApp = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteAppUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteAppMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApp>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteApp>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteApp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteApp>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteApp(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAppMutationResult = NonNullable<Awaited<ReturnType<typeof deleteApp>>>
+
+    export type DeleteAppMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Delete an application and its resources, grants, policy, and API keys
+ */
+export const useDeleteApp = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApp>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteApp>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAppMutationOptions(options));
+    }
+
+export const getCreateResourceUrl = () => {
+
+
+
+
+  return `/api/resources`
+}
+
+/**
+ * @summary Add a resource to an application
+ */
+export const createResource = async (resourceInput: ResourceInput, options?: RequestInit): Promise<Resource> => {
+
+  return customFetch<Resource>(getCreateResourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resourceInput)
+  }
+);}
+
+
+
+
+export const getCreateResourceMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResource>>, TError,{data: BodyType<ResourceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResource>>, TError,{data: BodyType<ResourceInput>}, TContext> => {
+
+const mutationKey = ['createResource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResource>>, {data: BodyType<ResourceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResource(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof createResource>>>
+    export type CreateResourceMutationBody = BodyType<ResourceInput>
+    export type CreateResourceMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Add a resource to an application
+ */
+export const useCreateResource = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResource>>, TError,{data: BodyType<ResourceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResource>>,
+        TError,
+        {data: BodyType<ResourceInput>},
+        TContext
+      > => {
+      return useMutation(getCreateResourceMutationOptions(options));
+    }
+
 export const getListResourcesUrl = (params?: ListResourcesParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1291,6 +1575,147 @@ export function useListResources<TData = Awaited<ReturnType<typeof listResources
 
 
 
+
+export const getUpdateResourceUrl = (id: number,) => {
+
+
+
+
+  return `/api/resources/${id}`
+}
+
+/**
+ * @summary Update a resource (name, type, description)
+ */
+export const updateResource = async (id: number,
+    resourceUpdate: ResourceUpdate, options?: RequestInit): Promise<Resource> => {
+
+  return customFetch<Resource>(getUpdateResourceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resourceUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateResourceMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResource>>, TError,{id: number;data: BodyType<ResourceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResource>>, TError,{id: number;data: BodyType<ResourceUpdate>}, TContext> => {
+
+const mutationKey = ['updateResource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResource>>, {id: number;data: BodyType<ResourceUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateResource(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof updateResource>>>
+    export type UpdateResourceMutationBody = BodyType<ResourceUpdate>
+    export type UpdateResourceMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Update a resource (name, type, description)
+ */
+export const useUpdateResource = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResource>>, TError,{id: number;data: BodyType<ResourceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResource>>,
+        TError,
+        {id: number;data: BodyType<ResourceUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateResourceMutationOptions(options));
+    }
+
+export const getDeleteResourceUrl = (id: number,) => {
+
+
+
+
+  return `/api/resources/${id}`
+}
+
+/**
+ * @summary Remove a resource (revokes its grants)
+ */
+export const deleteResource = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteResourceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteResourceMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResource>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteResource>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteResource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteResource>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteResource(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteResourceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResource>>>
+
+    export type DeleteResourceMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Remove a resource (revokes its grants)
+ */
+export const useDeleteResource = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResource>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteResource>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteResourceMutationOptions(options));
+    }
 
 export const getListAccessGrantsUrl = (params?: ListAccessGrantsParams,) => {
   const normalizedParams = new URLSearchParams();

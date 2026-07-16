@@ -243,6 +243,53 @@ export interface App {
   resourceCount: number;
 }
 
+export interface AppInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+}
+
+export type ResourceInputType = typeof ResourceInputType[keyof typeof ResourceInputType];
+
+
+export const ResourceInputType = {
+  Form: 'Form',
+  Tab: 'Tab',
+  Table: 'Table',
+} as const;
+
+export interface ResourceInput {
+  appId: number;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  type: ResourceInputType;
+  description?: string;
+}
+
+export type ResourceUpdateType = typeof ResourceUpdateType[keyof typeof ResourceUpdateType];
+
+
+export const ResourceUpdateType = {
+  Form: 'Form',
+  Tab: 'Tab',
+  Table: 'Table',
+} as const;
+
+export interface ResourceUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name?: string;
+  type?: ResourceUpdateType;
+  description?: string;
+}
+
 export type ResourceType = typeof ResourceType[keyof typeof ResourceType];
 
 

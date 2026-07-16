@@ -271,6 +271,80 @@ export const ListAppsResponse = zod.array(ListAppsResponseItem)
 
 
 /**
+ * @summary Onboard a new application (creates a default security policy)
+ */
+export const createAppBodyNameMax = 100;
+
+
+
+export const CreateAppBody = zod.object({
+  "name": zod.string().min(1).max(createAppBodyNameMax)
+})
+
+export const CreateAppResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "resourceCount": zod.number()
+})
+
+
+/**
+ * @summary Rename an application
+ */
+export const UpdateAppParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateAppBodyNameMax = 100;
+
+
+
+export const UpdateAppBody = zod.object({
+  "name": zod.string().min(1).max(updateAppBodyNameMax)
+})
+
+export const UpdateAppResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "resourceCount": zod.number()
+})
+
+
+/**
+ * @summary Delete an application and its resources, grants, policy, and API keys
+ */
+export const DeleteAppParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAppResponse = zod.void()
+
+
+/**
+ * @summary Add a resource to an application
+ */
+export const createResourceBodyNameMax = 200;
+
+
+
+export const CreateResourceBody = zod.object({
+  "appId": zod.number(),
+  "name": zod.string().min(1).max(createResourceBodyNameMax),
+  "type": zod.enum(['Form', 'Tab', 'Table']),
+  "description": zod.string().optional()
+})
+
+export const CreateResourceResponse = zod.object({
+  "id": zod.number(),
+  "appId": zod.number(),
+  "appName": zod.string(),
+  "name": zod.string(),
+  "type": zod.enum(['Form', 'Tab', 'Table']),
+  "description": zod.string()
+})
+
+
+/**
  * @summary List resources (forms, tabs, tables), optionally by app
  */
 export const ListResourcesQueryParams = zod.object({
@@ -286,6 +360,43 @@ export const ListResourcesResponseItem = zod.object({
   "description": zod.string()
 })
 export const ListResourcesResponse = zod.array(ListResourcesResponseItem)
+
+
+/**
+ * @summary Update a resource (name, type, description)
+ */
+export const UpdateResourceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateResourceBodyNameMax = 200;
+
+
+
+export const UpdateResourceBody = zod.object({
+  "name": zod.string().min(1).max(updateResourceBodyNameMax).optional(),
+  "type": zod.enum(['Form', 'Tab', 'Table']).optional(),
+  "description": zod.string().optional()
+})
+
+export const UpdateResourceResponse = zod.object({
+  "id": zod.number(),
+  "appId": zod.number(),
+  "appName": zod.string(),
+  "name": zod.string(),
+  "type": zod.enum(['Form', 'Tab', 'Table']),
+  "description": zod.string()
+})
+
+
+/**
+ * @summary Remove a resource (revokes its grants)
+ */
+export const DeleteResourceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteResourceResponse = zod.void()
 
 
 /**

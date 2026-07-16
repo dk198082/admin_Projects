@@ -323,7 +323,106 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/App"
+    post:
+      operationId: createApp
+      tags: [apps]
+      summary: Onboard a new application (creates a default security policy)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppInput"
+      responses:
+        "201":
+          description: Created app
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+        "400":
+          description: Invalid input or duplicate name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /apps/{id}:
+    patch:
+      operationId: updateApp
+      tags: [apps]
+      summary: Rename an application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppInput"
+      responses:
+        "200":
+          description: Updated app
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+        "400":
+          description: Invalid input or duplicate name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    delete:
+      operationId: deleteApp
+      tags: [apps]
+      summary: Delete an application and its resources, grants, policy, and API keys
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /resources:
+    post:
+      operationId: createResource
+      tags: [apps]
+      summary: Add a resource to an application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceInput"
+      responses:
+        "201":
+          description: Created resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          description: Invalid input or duplicate name within app
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
     get:
       operationId: listResources
       tags: [apps]
@@ -342,6 +441,59 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Resource"
+  /resources/{id}:
+    patch:
+      operationId: updateResource
+      tags: [apps]
+      summary: Update a resource (name, type, description)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceUpdate"
+      responses:
+        "200":
+          description: Updated resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          description: Invalid input or duplicate name within app
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    delete:
+      operationId: deleteResource
+      tags: [apps]
+      summary: Remove a resource (revokes its grants)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /access-grants:
     get:
       operationId: listAccessGrants
@@ -885,6 +1037,25 @@ components:
         id: { type: integer }
         name: { type: string }
         resourceCount: { type: integer }
+    AppInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+    ResourceInput:
+      type: object
+      required: [appId, name, type]
+      properties:
+        appId: { type: integer }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        type: { type: string, enum: [Form, Tab, Table] }
+        description: { type: string }
+    ResourceUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        type: { type: string, enum: [Form, Tab, Table] }
+        description: { type: string }
     Resource:
       type: object
       required: [id, appId, appName, name, type, description]

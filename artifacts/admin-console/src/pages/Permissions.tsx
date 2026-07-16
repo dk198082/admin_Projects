@@ -26,6 +26,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PermissionLevel } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { AddAppDialog, ManageResourcesDialog } from "@/components/ManageAppsDialog";
+import { Settings2, AppWindow } from "lucide-react";
 
 export default function Permissions() {
   const queryClient = useQueryClient();
@@ -58,6 +60,8 @@ export default function Permissions() {
 
   const [isNewRoleOpen, setIsNewRoleOpen] = useState(false);
   const [newRole, setNewRole] = useState({ name: "", description: "" });
+  const [isAddAppOpen, setIsAddAppOpen] = useState(false);
+  const [isManageResourcesOpen, setIsManageResourcesOpen] = useState(false);
 
   const handleCreateRole = () => {
     if (!newRole.name.trim()) {
@@ -151,6 +155,14 @@ export default function Permissions() {
               </SelectContent>
             </Select>
           </div>
+          <Button variant="outline" onClick={() => setIsAddAppOpen(true)}>
+            <AppWindow className="h-4 w-4 mr-2" />
+            Add App
+          </Button>
+          <Button variant="outline" onClick={() => setIsManageResourcesOpen(true)}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Manage Resources
+          </Button>
           <Button onClick={() => { setNewRole({ name: "", description: "" }); setIsNewRoleOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             New Role
@@ -261,6 +273,20 @@ export default function Permissions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AddAppDialog
+        open={isAddAppOpen}
+        onOpenChange={setIsAddAppOpen}
+        onCreated={(appId) => {
+          setSelectedApp(appId.toString());
+          setIsManageResourcesOpen(true);
+        }}
+      />
+      <ManageResourcesDialog
+        open={isManageResourcesOpen}
+        onOpenChange={setIsManageResourcesOpen}
+        initialAppId={selectedApp !== "all" ? parseInt(selectedApp) : undefined}
+      />
     </div>
   );
 }
