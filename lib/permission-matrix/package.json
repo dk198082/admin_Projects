@@ -1,0 +1,17 @@
+{
+  "name": "@workspace/permission-matrix",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

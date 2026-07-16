@@ -10,7 +10,7 @@ import {
   useCreateRole
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Shield, LayoutGrid, FileText, Table as TableIcon, Plus } from "lucide-react";
+import { Shield, LayoutGrid, FileText, Table as TableIcon, Plus, Download } from "lucide-react";
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
@@ -57,6 +57,32 @@ export default function Permissions() {
   const updateGrant = useUpdateAccessGrant();
   const deleteGrant = useDeleteAccessGrant();
   const createRole = useCreateRole();
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadExcel = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/permission-matrix/export", { credentials: "include" });
+      if (!res.ok) {
+        throw new Error(`Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "apps-roles-security-setup.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "Spreadsheet downloaded", description: "Built from the latest data." });
+    } catch {
+      toast({ title: "Failed to download spreadsheet", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const [isNewRoleOpen, setIsNewRoleOpen] = useState(false);
   const [newRole, setNewRole] = useState({ name: "", description: "" });
@@ -155,6 +181,10 @@ export default function Permissions() {
               </SelectContent>
             </Select>
           </div>
+          <Button variant="outline" onClick={handleDownloadExcel} disabled={isExporting} data-testid="button-download-excel">
+            <Download className="h-4 w-4 mr-2" />
+            {isExporting ? "Preparing..." : "Download Excel"}
+          </Button>
           <Button variant="outline" onClick={() => setIsAddAppOpen(true)}>
             <AppWindow className="h-4 w-4 mr-2" />
             Add App

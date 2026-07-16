@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
-    "drizzle-orm": "catalog:",
-    "exceljs": "^4.4.0"
+    "@workspace/permission-matrix": "workspace:*",
+    "drizzle-orm": "catalog:"
   }
 }

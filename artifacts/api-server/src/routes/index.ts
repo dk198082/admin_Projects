@@ -11,6 +11,7 @@ import entraRouter from "./entra";
 import authRouter from "./auth";
 import accessCheckRouter from "./accessCheck";
 import apiKeysRouter from "./apiKeys";
+import permissionMatrixRouter from "./permissionMatrix";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -28,5 +29,6 @@ router.use(securityRouter);
 router.use(auditRouter);
 router.use(syncRouter);
 router.use(entraRouter);
+router.use(permissionMatrixRouter);
 
 export default router;

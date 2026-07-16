@@ -494,6 +494,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /permission-matrix/export:
+    get:
+      operationId: exportPermissionMatrix
+      tags: [grants]
+      summary: Download the permission-matrix spreadsheet (xlsx) built from live data
+      responses:
+        "200":
+          description: Excel workbook
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
   /access-grants:
     get:
       operationId: listAccessGrants

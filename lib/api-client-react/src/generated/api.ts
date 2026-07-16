@@ -1719,6 +1719,83 @@ export const useDeleteResource = <TError = ErrorType<ErrorMessage>,
       return useMutation(getDeleteResourceMutationOptions(options));
     }
 
+export const getExportPermissionMatrixUrl = () => {
+
+
+
+
+  return `/api/permission-matrix/export`
+}
+
+/**
+ * @summary Download the permission-matrix spreadsheet (xlsx) built from live data
+ */
+export const exportPermissionMatrix = async ( options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getExportPermissionMatrixUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportPermissionMatrixQueryKey = () => {
+    return [
+    `/api/permission-matrix/export`
+    ] as const;
+    }
+
+
+export const getExportPermissionMatrixQueryOptions = <TData = Awaited<ReturnType<typeof exportPermissionMatrix>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPermissionMatrix>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportPermissionMatrixQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportPermissionMatrix>>> = ({ signal }) => exportPermissionMatrix({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportPermissionMatrix>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportPermissionMatrixQueryResult = NonNullable<Awaited<ReturnType<typeof exportPermissionMatrix>>>
+export type ExportPermissionMatrixQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Download the permission-matrix spreadsheet (xlsx) built from live data
+ */
+
+export function useExportPermissionMatrix<TData = Awaited<ReturnType<typeof exportPermissionMatrix>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPermissionMatrix>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportPermissionMatrixQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListAccessGrantsUrl = (params?: ListAccessGrantsParams,) => {
   const normalizedParams = new URLSearchParams();
 

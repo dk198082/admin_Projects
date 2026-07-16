@@ -400,6 +400,12 @@ export const DeleteResourceResponse = zod.void()
 
 
 /**
+ * @summary Download the permission-matrix spreadsheet (xlsx) built from live data
+ */
+export const ExportPermissionMatrixResponse = zod.unknown()
+
+
+/**
  * @summary List access grants, optionally filtered by app or role
  */
 export const ListAccessGrantsQueryParams = zod.object({
