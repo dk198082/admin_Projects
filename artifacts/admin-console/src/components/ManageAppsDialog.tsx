@@ -153,6 +153,7 @@ export function ManageResourcesDialog({
   const [confirmDeleteApp, setConfirmDeleteApp] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [confirmDeleteResource, setConfirmDeleteResource] = useState<{ id: number; name: string } | null>(null);
+  const [deleteResourceConfirmText, setDeleteResourceConfirmText] = useState("");
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: getListAppsQueryKey() });
@@ -200,8 +201,11 @@ export function ManageResourcesDialog({
     );
   };
 
+  const deleteResourceNameMatches =
+    !!confirmDeleteResource && deleteResourceConfirmText.trim() === confirmDeleteResource.name;
+
   const handleDeleteResource = () => {
-    if (!confirmDeleteResource) return;
+    if (!confirmDeleteResource || !deleteResourceNameMatches) return;
     deleteResource.mutate(
       { id: confirmDeleteResource.id },
       {
@@ -209,10 +213,12 @@ export function ManageResourcesDialog({
           invalidateAll();
           toast({ title: `Resource "${confirmDeleteResource.name}" removed`, description: "Its grants were revoked." });
           setConfirmDeleteResource(null);
+          setDeleteResourceConfirmText("");
         },
         onError: (err: unknown) => {
           toast({ title: errMsg(err, "Failed to remove resource"), variant: "destructive" });
           setConfirmDeleteResource(null);
+          setDeleteResourceConfirmText("");
         },
       },
     );
@@ -440,18 +446,35 @@ export function ManageResourcesDialog({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!confirmDeleteResource} onOpenChange={(o) => { if (!o) setConfirmDeleteResource(null); }}>
+      <AlertDialog
+        open={!!confirmDeleteResource}
+        onOpenChange={(o) => { if (!o) { setConfirmDeleteResource(null); setDeleteResourceConfirmText(""); } }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove "{confirmDeleteResource?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
               This removes the resource from the permission matrix and revokes any role grants on it.
+              This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="confirm-delete-resource">
+              Type <span className="font-semibold">{confirmDeleteResource?.name}</span> to confirm
+            </Label>
+            <Input
+              id="confirm-delete-resource"
+              autoComplete="off"
+              placeholder={confirmDeleteResource?.name}
+              value={deleteResourceConfirmText}
+              onChange={(e) => setDeleteResourceConfirmText(e.target.value)}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!deleteResourceNameMatches || deleteResource.isPending}
               onClick={handleDeleteResource}
             >
               {deleteResource.isPending ? "Removing..." : "Remove Resource"}
