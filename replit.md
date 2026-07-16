@@ -26,7 +26,7 @@ Role-based security administration for two internal apps ("Production Shop Floor
 - `artifacts/api-server/src/routes` — Express routes (users, roles, appsResources, grants, security, audit)
 - `lib/api-spec/openapi.yaml` — API contract source of truth (regen via codegen)
 - `lib/db/src/schema/` — Drizzle tables: apps, roles, users, roleAssignments, resources, accessGrants, securityPolicies, auditLog
-- `scripts/src/generate-roles-security-spreadsheet.ts` — permission-matrix Excel generator (`scripts/exports/apps-roles-security-setup.xlsx`)
+- `scripts/src/generate-roles-security-spreadsheet.ts` — permission-matrix Excel generator, DB-driven (run `pnpm --filter @workspace/scripts run generate-spreadsheet`; output `scripts/exports/apps-roles-security-setup.xlsx`)
 
 ## Architecture decisions
 

@@ -1,26 +1,24 @@
 import ExcelJS from "exceljs";
 import path from "path";
 import fs from "fs";
+import { asc } from "drizzle-orm";
+import {
+  db,
+  pool,
+  appsTable,
+  rolesTable,
+  resourcesTable,
+  accessGrantsTable,
+  securityPoliciesTable,
+} from "@workspace/db";
 
-const ROLES = [
-  "Admin",
-  "Manager",
-  "Coordinator (Dispatcher)",
-  "Production Planner",
-  "Shop Floor Scheduler",
-];
-
-const ACCESS_LEVELS = [
-  "Full Rights",
-  "Read & Write",
-  "View",
-];
+const ACCESS_LEVELS = ["Full Rights", "Read & Write", "View"];
 
 type ItemRow = {
   item: string;
-  type: "Form" | "Tab" | "Table";
+  type: string;
   description: string;
-  access: string[]; // one per role, same order as ROLES
+  access: string[]; // one per role, same order as roles
 };
 
 type SecurityRow = {
@@ -35,103 +33,63 @@ type AppSection = {
   security: SecurityRow[];
 };
 
-const F = "Full Rights";
-const RW = "Read & Write";
-const V = "View";
+async function loadData(): Promise<{ roles: string[]; apps: AppSection[] }> {
+  const [appRows, roleRows, resourceRows, grantRows, policyRows] = await Promise.all([
+    db.select().from(appsTable).orderBy(asc(appsTable.id)),
+    db.select().from(rolesTable).orderBy(asc(rolesTable.id)),
+    db.select().from(resourcesTable).orderBy(asc(resourcesTable.id)),
+    db.select().from(accessGrantsTable),
+    db.select().from(securityPoliciesTable),
+  ]);
 
-const apps: AppSection[] = [
-  {
-    name: "ADMIN CONSOLE (ALL APPS)",
-    items: [
-      { item: "User Management Tab", type: "Tab", description: "Create, edit, disable users across all apps", access: [F, V, V, V, V] },
-      { item: "Roles & Permissions Tab", type: "Tab", description: "Manage roles and access grants for all apps", access: [F, V, V, V, V] },
-      { item: "Security Settings Tab", type: "Tab", description: "Configure security policies per app (SSO, MFA, timeouts)", access: [F, V, V, V, V] },
-      { item: "Audit Log Tab", type: "Tab", description: "Review all changes to users, roles, and permissions", access: [F, V, V, V, V] },
-      { item: "New User Form", type: "Form", description: "Register a new user (name, email, status)", access: [F, V, V, V, V] },
-      { item: "Role Assignment Form", type: "Form", description: "Assign one or more roles to a user (User \u00d7 Role)", access: [F, V, V, V, V] },
-      { item: "Permission Grant Form", type: "Form", description: "Grant a role access to a resource at a permission level (Role \u00d7 Resource \u00d7 Level)", access: [F, V, V, V, V] },
-      { item: "Security Policy Form", type: "Form", description: "Edit an app's security policy (auth, MFA, session, audit)", access: [F, V, V, V, V] },
-      { item: "Users Table", type: "Table", description: "All users with status and assigned roles", access: [F, V, V, V, V] },
-      { item: "Roles Table", type: "Table", description: "The five roles and their descriptions", access: [F, V, V, V, V] },
-      { item: "Role Assignments Table", type: "Table", description: "User-to-role mappings (who has which role)", access: [F, V, V, V, V] },
-      { item: "Access Grants Table", type: "Table", description: "Role \u00d7 Resource \u00d7 Permission Level matrix (mirrors this spreadsheet)", access: [F, V, V, V, V] },
-      { item: "Resources Table", type: "Table", description: "All forms, tabs, and tables registered per app", access: [F, V, V, V, V] },
-      { item: "Permission Levels Table", type: "Table", description: "Full Rights / Read & Write / View definitions", access: [F, V, V, V, V] },
-      { item: "Security Policies Table", type: "Table", description: "Per-app security policy settings", access: [F, V, V, V, V] },
-      { item: "Audit Log Table", type: "Table", description: "History of all admin actions (who changed what, when)", access: [F, V, V, V, V] },
-    ],
-    security: [
-      { setting: "Who can access", value: "Admin role only (managers view-only)", notes: "All other roles: View at most; no edit rights anywhere in the console" },
-      { setting: "Multi-factor authentication (MFA)", value: "Always required", notes: "No exceptions for admin console access" },
-      { setting: "Session timeout", value: "15 minutes idle", notes: "Stricter than the apps it manages" },
-      { setting: "Approval workflow", value: "Admin role assignment needs a second Admin", notes: "Prevents a single admin from escalating privileges alone" },
-      { setting: "Audit logging", value: "Enabled - every action logged, immutable", notes: "Audit log is read-only even for Admin; retained 24 months" },
-      { setting: "Scope", value: "Cross-app: governs both apps below", notes: "Changes here apply to Production Shop Floor and Field Service Calendar" },
-    ],
-  },
-  {
-    name: "PRODUCTION SHOP FLOOR",
-    items: [
-      { item: "Dashboard Tab", type: "Tab", description: "Overview of production status and KPIs", access: [F, RW, V, V, V] },
-      { item: "Scheduling Tab", type: "Tab", description: "Production scheduling workspace", access: [F, RW, V, RW, F] },
-      { item: "Reports Tab", type: "Tab", description: "Production, downtime, and quality reports", access: [F, RW, V, V, V] },
-      { item: "Work Order Form", type: "Form", description: "Create and update production work orders", access: [F, RW, V, RW, RW] },
-      { item: "Production Schedule Form", type: "Form", description: "Plan and adjust production runs by line/shift", access: [F, RW, V, RW, F] },
-      { item: "Downtime Report Form", type: "Form", description: "Log machine downtime and causes", access: [F, RW, RW, V, RW] },
-      { item: "Quality Check Form", type: "Form", description: "Record quality inspections and results", access: [F, RW, V, V, V] },
-      { item: "Material Request Form", type: "Form", description: "Request materials for production jobs", access: [F, RW, RW, RW, RW] },
-      { item: "Shift Handover Form", type: "Form", description: "Document shift-to-shift handover notes", access: [F, RW, RW, V, RW] },
-      { item: "Work Orders Table", type: "Table", description: "Master list of all work orders and statuses", access: [F, RW, V, RW, RW] },
-      { item: "Machines / Equipment Table", type: "Table", description: "Equipment registry, status, and maintenance info", access: [F, RW, V, V, V] },
-      { item: "Production Schedule Table", type: "Table", description: "Scheduled runs by date, line, and shift", access: [F, RW, V, RW, F] },
-      { item: "Downtime Log Table", type: "Table", description: "History of downtime events", access: [F, V, V, V, V] },
-      { item: "Quality Results Table", type: "Table", description: "Inspection outcomes and defect records", access: [F, V, V, V, V] },
-      { item: "Materials / Inventory Table", type: "Table", description: "Raw material stock levels and locations", access: [F, RW, V, RW, V] },
-      { item: "Operators / Shifts Table", type: "Table", description: "Operator roster and shift assignments", access: [F, RW, V, V, RW] },
-    ],
-    security: [
-      { setting: "Authentication method", value: "SSO (company login)", notes: "All users sign in with company credentials" },
-      { setting: "Multi-factor authentication (MFA)", value: "Required for Admin & Manager", notes: "Optional for other roles" },
-      { setting: "Session timeout", value: "30 minutes idle", notes: "Shared shop floor terminals: 10 minutes" },
-      { setting: "Record-level access", value: "By plant / production line", notes: "Users only see lines they are assigned to" },
-      { setting: "Field-level restrictions", value: "Cost fields hidden from non-managers", notes: "Labor and material cost columns" },
-      { setting: "Approval workflow", value: "Schedule changes need Manager approval", notes: "Applies to published schedules only" },
-      { setting: "Audit logging", value: "Enabled - all create/edit/delete", notes: "Retained 12 months" },
-      { setting: "Data export", value: "Admin & Manager only", notes: "CSV/Excel export of tables" },
-    ],
-  },
-  {
-    name: "FIELD SERVICE CALENDAR",
-    items: [
-      { item: "Calendar Tab", type: "Tab", description: "Main scheduling calendar view", access: [F, RW, F, V, RW] },
-      { item: "Dispatch Board Tab", type: "Tab", description: "Assign and track technician jobs", access: [F, RW, F, V, V] },
-      { item: "Reports Tab", type: "Tab", description: "Service performance and history reports", access: [F, RW, V, V, V] },
-      { item: "Service Request Form", type: "Form", description: "Log new customer service requests", access: [F, RW, F, V, V] },
-      { item: "Appointment Booking Form", type: "Form", description: "Schedule and assign service visits", access: [F, RW, F, V, RW] },
-      { item: "Job Completion Form", type: "Form", description: "Record work performed and close out jobs", access: [F, RW, RW, V, V] },
-      { item: "Time & Parts Form", type: "Form", description: "Log labor hours and parts used per job", access: [F, RW, RW, V, V] },
-      { item: "Customer Sign-off Form", type: "Form", description: "Capture customer approval/signature", access: [F, V, RW, V, V] },
-      { item: "Service Calendar Table", type: "Table", description: "Calendar of all scheduled appointments", access: [F, RW, F, V, RW] },
-      { item: "Technicians Table", type: "Table", description: "Technician roster, skills, and availability", access: [F, RW, RW, V, V] },
-      { item: "Customers Table", type: "Table", description: "Customer contact and site information", access: [F, RW, RW, V, V] },
-      { item: "Equipment / Assets Table", type: "Table", description: "Customer equipment under service", access: [F, RW, RW, V, V] },
-      { item: "Service History Table", type: "Table", description: "Completed visits and outcomes", access: [F, V, V, V, V] },
-      { item: "Parts Inventory Table", type: "Table", description: "Van and warehouse parts stock", access: [F, RW, RW, V, V] },
-    ],
-    security: [
-      { setting: "Authentication method", value: "SSO (company login)", notes: "Field techs may use mobile app login" },
-      { setting: "Multi-factor authentication (MFA)", value: "Required for Admin & Manager", notes: "Recommended for Coordinator" },
-      { setting: "Session timeout", value: "60 minutes idle (mobile)", notes: "Web sessions: 30 minutes" },
-      { setting: "Record-level access", value: "By service region / territory", notes: "Coordinators see their region only" },
-      { setting: "Field-level restrictions", value: "Customer billing info hidden from techs", notes: "Visible to Admin & Manager only" },
-      { setting: "Approval workflow", value: "Cancellations need Coordinator approval", notes: "Same-day changes flagged to Manager" },
-      { setting: "Audit logging", value: "Enabled - all create/edit/delete", notes: "Retained 12 months" },
-      { setting: "Data export", value: "Admin & Manager only", notes: "Customer data export requires Admin" },
-    ],
-  },
-];
+  const grantByResourceRole = new Map<string, string>();
+  for (const g of grantRows) {
+    grantByResourceRole.set(`${g.resourceId}:${g.roleId}`, g.level);
+  }
+  const policyByAppId = new Map(policyRows.map((p) => [p.appId, p]));
+
+  const apps: AppSection[] = appRows.map((app) => {
+    const items: ItemRow[] = resourceRows
+      .filter((r) => r.appId === app.id)
+      .map((r) => ({
+        item: r.name,
+        type: r.type,
+        description: r.description,
+        access: roleRows.map(
+          (role) => grantByResourceRole.get(`${r.id}:${role.id}`) ?? "No Access",
+        ),
+      }));
+
+    const p = policyByAppId.get(app.id);
+    const security: SecurityRow[] = p
+      ? [
+          { setting: "Authentication method", value: p.authMethod, notes: "" },
+          { setting: "Multi-factor authentication (MFA)", value: p.mfaRequired, notes: "" },
+          {
+            setting: "Session timeout",
+            value: `${p.sessionTimeoutMinutes} minutes idle`,
+            notes: "",
+          },
+          { setting: "Record-level access", value: p.recordLevelScope, notes: "" },
+          { setting: "Field-level restrictions", value: p.fieldLevelRules, notes: "" },
+          {
+            setting: "Audit logging",
+            value: p.auditLogging ? "Enabled - all create/edit/delete" : "Disabled",
+            notes: "",
+          },
+          { setting: "Data export", value: p.dataExportPolicy, notes: "" },
+        ]
+      : [];
+
+    return { name: app.name.toUpperCase(), items, security };
+  });
+
+  return { roles: roleRows.map((r) => r.name), apps };
+}
 
 async function main() {
+  const { roles: ROLES, apps } = await loadData();
+
   const wb = new ExcelJS.Workbook();
   wb.creator = "Roles & Security Setup";
   const ws = wb.addWorksheet("Roles & Security Matrix", {
@@ -154,7 +112,6 @@ async function main() {
   const green = "FFC6EFCE";
   const yellow = "FFFFF2CC";
   const orange = "FFFCE4D6";
-  const red = "FFF8CBAD";
 
   const thin = { style: "thin" as const, color: { argb: "FFBFBFBF" } };
   const allBorders = { top: thin, left: thin, bottom: thin, right: thin };
@@ -214,6 +171,16 @@ async function main() {
     ws.getRow(row).height = 26;
     row++;
 
+    if (app.items.length === 0) {
+      ws.mergeCells(row, 1, row, NUM_COLS);
+      const c = ws.getCell(row, 1);
+      c.value = "No resources registered yet — add Forms/Tabs/Tables via Manage Resources in the Admin Console.";
+      c.font = { italic: true, size: 10, color: { argb: "FF595959" } };
+      c.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+      for (let col = 1; col <= NUM_COLS; col++) ws.getCell(row, col).border = allBorders;
+      row++;
+    }
+
     const firstDataRow = row;
     for (const it of app.items) {
       ws.getCell(row, 1).value = it.item;
@@ -241,50 +208,53 @@ async function main() {
       row++;
     }
     const lastDataRow = row - 1;
-    accessCellRanges.push(
-      `${ws.getCell(firstDataRow, 4).address}:${ws.getCell(lastDataRow, 3 + ROLES.length).address}`
-    );
+    if (lastDataRow >= firstDataRow) {
+      accessCellRanges.push(
+        `${ws.getCell(firstDataRow, 4).address}:${ws.getCell(lastDataRow, 3 + ROLES.length).address}`
+      );
+    }
 
     row++; // spacer
 
     // Security setup sub-section
-    ws.mergeCells(row, 1, row, NUM_COLS);
-    const secHdr = ws.getCell(row, 1);
-    secHdr.value = `${app.name} — SECURITY SETUP`;
-    secHdr.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
-    secHdr.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF548235" } };
-    secHdr.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
-    ws.getRow(row).height = 20;
-    row++;
+    if (app.security.length > 0) {
+      ws.mergeCells(row, 1, row, NUM_COLS);
+      const secHdr = ws.getCell(row, 1);
+      secHdr.value = `${app.name} — SECURITY SETUP`;
+      secHdr.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+      secHdr.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF548235" } };
+      secHdr.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+      ws.getRow(row).height = 20;
+      row++;
 
-    const secHeaders = ["Security Setting", "", "Policy / Value"];
-    ws.getCell(row, 1).value = secHeaders[0];
-    ws.mergeCells(row, 3, row, 5);
-    ws.getCell(row, 3).value = "Policy / Value";
-    ws.mergeCells(row, 6, row, NUM_COLS);
-    ws.getCell(row, 6).value = "Notes";
-    for (const col of [1, 3, 6]) {
-      const c = ws.getCell(row, col);
-      c.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
-      c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF70AD47" } };
-      c.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
-    }
-    for (let col = 1; col <= NUM_COLS; col++) ws.getCell(row, col).border = allBorders;
-    row++;
-
-    for (const s of app.security) {
-      ws.mergeCells(row, 1, row, 2);
-      ws.getCell(row, 1).value = s.setting;
-      ws.getCell(row, 1).font = { bold: true, size: 10 };
+      ws.getCell(row, 1).value = "Security Setting";
       ws.mergeCells(row, 3, row, 5);
-      ws.getCell(row, 3).value = s.value;
-      ws.getCell(row, 3).font = { size: 10 };
-      ws.getCell(row, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: yellow } };
+      ws.getCell(row, 3).value = "Policy / Value";
       ws.mergeCells(row, 6, row, NUM_COLS);
-      ws.getCell(row, 6).value = s.notes;
-      ws.getCell(row, 6).font = { size: 10, italic: true, color: { argb: "FF595959" } };
+      ws.getCell(row, 6).value = "Notes";
+      for (const col of [1, 3, 6]) {
+        const c = ws.getCell(row, col);
+        c.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
+        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF70AD47" } };
+        c.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+      }
       for (let col = 1; col <= NUM_COLS; col++) ws.getCell(row, col).border = allBorders;
       row++;
+
+      for (const s of app.security) {
+        ws.mergeCells(row, 1, row, 2);
+        ws.getCell(row, 1).value = s.setting;
+        ws.getCell(row, 1).font = { bold: true, size: 10 };
+        ws.mergeCells(row, 3, row, 5);
+        ws.getCell(row, 3).value = s.value;
+        ws.getCell(row, 3).font = { size: 10 };
+        ws.getCell(row, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: yellow } };
+        ws.mergeCells(row, 6, row, NUM_COLS);
+        ws.getCell(row, 6).value = s.notes;
+        ws.getCell(row, 6).font = { size: 10, italic: true, color: { argb: "FF595959" } };
+        for (let col = 1; col <= NUM_COLS; col++) ws.getCell(row, col).border = allBorders;
+        row++;
+      }
     }
 
     row += 2; // gap between apps
@@ -326,7 +296,9 @@ async function main() {
   console.log(`Written: ${outPath}`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(() => pool.end());
