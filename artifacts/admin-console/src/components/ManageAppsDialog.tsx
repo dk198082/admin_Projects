@@ -151,6 +151,7 @@ export function ManageResourcesDialog({
   const [renamingApp, setRenamingApp] = useState(false);
   const [appNameDraft, setAppNameDraft] = useState("");
   const [confirmDeleteApp, setConfirmDeleteApp] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [confirmDeleteResource, setConfirmDeleteResource] = useState<{ id: number; name: string } | null>(null);
 
   const invalidateAll = () => {
@@ -233,8 +234,10 @@ export function ManageResourcesDialog({
     );
   };
 
+  const deleteNameMatches = !!selectedApp && deleteConfirmText.trim() === selectedApp.name;
+
   const handleDeleteApp = () => {
-    if (!selectedApp) return;
+    if (!selectedApp || !deleteNameMatches) return;
     deleteApp.mutate(
       { id: selectedApp.id },
       {
@@ -399,7 +402,10 @@ export function ManageResourcesDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={confirmDeleteApp} onOpenChange={setConfirmDeleteApp}>
+      <AlertDialog
+        open={confirmDeleteApp}
+        onOpenChange={(o) => { setConfirmDeleteApp(o); if (!o) setDeleteConfirmText(""); }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{selectedApp?.name}"?</AlertDialogTitle>
@@ -409,10 +415,23 @@ export function ManageResourcesDialog({
               This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="confirm-delete-app">
+              Type <span className="font-semibold">{selectedApp?.name}</span> to confirm
+            </Label>
+            <Input
+              id="confirm-delete-app"
+              autoComplete="off"
+              placeholder={selectedApp?.name}
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!deleteNameMatches || deleteApp.isPending}
               onClick={handleDeleteApp}
             >
               {deleteApp.isPending ? "Deleting..." : "Delete App"}
