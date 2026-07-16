@@ -28,6 +28,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -166,15 +170,34 @@ export default function Users() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      deleteUser.mutate({ id }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-          toast({ title: "User deleted" });
-        }
-      });
-    }
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<{ id: number; name: string; roleCount: number } | null>(null);
+  const [deleteUserConfirmText, setDeleteUserConfirmText] = useState("");
+  const deleteUserNameMatches =
+    !!confirmDeleteUser && deleteUserConfirmText.trim() === confirmDeleteUser.name;
+
+  const handleDeleteUser = () => {
+    if (!confirmDeleteUser || !deleteUserNameMatches) return;
+    deleteUser.mutate({ id: confirmDeleteUser.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+        setSelectedUserIds(prev => {
+          const next = new Set(prev);
+          next.delete(confirmDeleteUser.id);
+          return next;
+        });
+        toast({ title: `User "${confirmDeleteUser.name}" deleted` });
+        setConfirmDeleteUser(null);
+        setDeleteUserConfirmText("");
+      },
+      onError: (err: unknown) => {
+        const msg = err && typeof err === "object" && "error" in err
+          ? String((err as { error: unknown }).error)
+          : "Failed to delete user";
+        toast({ title: msg, variant: "destructive" });
+        setConfirmDeleteUser(null);
+        setDeleteUserConfirmText("");
+      }
+    });
   };
 
   const toggleRole = (userId: number, roleId: number, assigned: boolean, assignmentId?: number) => {
@@ -349,7 +372,7 @@ export default function Users() {
                         );
                       })}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(user.id)}>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmDeleteUser({ id: user.id, name: user.name, roleCount: user.roles.length })}>
                         <Trash2 className="h-4 w-4 mr-2" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -360,6 +383,46 @@ export default function Users() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog
+        open={!!confirmDeleteUser}
+        onOpenChange={(o) => { if (!o) { setConfirmDeleteUser(null); setDeleteUserConfirmText(""); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{confirmDeleteUser?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the user
+              {confirmDeleteUser && confirmDeleteUser.roleCount > 0
+                ? ` and their ${confirmDeleteUser.roleCount} role assignment${confirmDeleteUser.roleCount === 1 ? "" : "s"}`
+                : " and any role assignments they have"}
+              , revoking their access to the connected apps. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="confirm-delete-user">
+              Type <span className="font-semibold">{confirmDeleteUser?.name}</span> to confirm
+            </Label>
+            <Input
+              id="confirm-delete-user"
+              autoComplete="off"
+              placeholder={confirmDeleteUser?.name}
+              value={deleteUserConfirmText}
+              onChange={(e) => setDeleteUserConfirmText(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!deleteUserNameMatches || deleteUser.isPending}
+              onClick={handleDeleteUser}
+            >
+              {deleteUser.isPending ? "Deleting..." : "Delete User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isAssignOpen} onOpenChange={(o) => { if (!o) setIsAssignOpen(false); }}>
         <DialogContent>
