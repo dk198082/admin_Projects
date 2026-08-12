@@ -1,3 +1,4 @@
+import "dotenv/config";
 import app, { ensureSessionTable } from "./app";
 import { logger } from "./lib/logger";
 

@@ -29,7 +29,14 @@ router.get("/auth/login", async (req, res, next) => {
 
     req.session.codeVerifier = codeVerifier;
     req.session.oauthState = state;
-
+    
+     req.log.info(
+   {
+      sessionID: req.sessionID,
+      cookie: req.headers.cookie,
+    },
+  "LOGIN SESSION SAVED",
+);
     const url = oidcClient.buildAuthorizationUrl(config, {
       redirect_uri: getRedirectUri(req),
       scope: "openid profile email",
@@ -45,10 +52,24 @@ router.get("/auth/login", async (req, res, next) => {
 
 router.get("/auth/callback", async (req, res, next) => {
   try {
+
+      req.log.info(
+    {
+      sessionID: req.sessionID,
+      returnedState: req.query.state,
+      cookie: req.headers.cookie,
+    },
+    "AUTH CALLBACK SESSION",
+  );
+
     const config = await getOidcConfig();
     const { codeVerifier, oauthState } = req.session;
     if (!codeVerifier || !oauthState) {
-      res.redirect("/?auth_error=session_expired");
+      const FRONTEND_URL =
+           process.env.FRONTEND_URL ?? "http://localhost:5175";
+      // res.redirect("/?auth_error=session_expired");
+      res.redirect(
+                 `${FRONTEND_URL}/?auth_error=session_expired`,);
       return;
     }
 
@@ -100,13 +121,17 @@ router.get("/auth/callback", async (req, res, next) => {
   }
 });
 
-router.get("/auth/me", (req, res) => {
+router.get("/me", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+
   if (!req.session.user) {
-    res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "unauthenticated" });
     return;
   }
-  res.json(req.session.user);
+
+  res.status(200).json(req.session.user);
 });
+
 
 router.post("/auth/logout", async (req, res) => {
   const name = req.session.user?.name;
