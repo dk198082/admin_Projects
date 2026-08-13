@@ -5,6 +5,33 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface WorkOrderSummary {
+  orderNumber: string;
+  name: string;
+  itemNumber: string;
+  status: string;
+  scheduledDate?: string | null;
+  dataAreaId: string;
+}
+
+export interface WorkOrderPurgeInput {
+  /**
+     * @minItems 1
+     * @items.minLength 1
+     */
+  orderNumbers: string[];
+}
+
+export type WorkOrderPurgeResultCounts = {[key: string]: number};
+
+export interface WorkOrderPurgeResult {
+  dryRun: boolean;
+  dataAreaId: string;
+  orderNumbers: string[];
+  counts: WorkOrderPurgeResultCounts;
+  totalRows: number;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -212,6 +239,62 @@ export interface Role {
   description: string;
   userCount: number;
   grantCount: number;
+  appId?: number | null;
+  isEntitlement: boolean;
+}
+
+export type AccessMappingEntryLevel = typeof AccessMappingEntryLevel[keyof typeof AccessMappingEntryLevel];
+
+
+export const AccessMappingEntryLevel = {
+  Read_Only: 'Read Only',
+  'Read_/_Write': 'Read / Write',
+} as const;
+
+export interface AccessMappingEntry {
+  assignmentId: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  appId: number;
+  appName: string;
+  level: AccessMappingEntryLevel;
+  roleId: number;
+  roleName: string;
+  createdAt: string;
+}
+
+export type AccessMappingAssignInputLevel = typeof AccessMappingAssignInputLevel[keyof typeof AccessMappingAssignInputLevel];
+
+
+export const AccessMappingAssignInputLevel = {
+  Read_Only: 'Read Only',
+  'Read_/_Write': 'Read / Write',
+} as const;
+
+export interface AccessMappingAssignInput {
+  /** @minItems 1 */
+  userIds: number[];
+  /** @minItems 1 */
+  appIds: number[];
+  level: AccessMappingAssignInputLevel;
+}
+
+export interface AccessMappingAssignResult {
+  assigned: number;
+  updated: number;
+  skipped: number;
+}
+
+export interface AccessMappingRemoveInput {
+  /** @minItems 1 */
+  userIds: number[];
+  /** @minItems 1 */
+  appIds: number[];
+}
+
+export interface AccessMappingRemoveResult {
+  removed: number;
 }
 
 export interface CreateRoleInput {
@@ -362,6 +445,26 @@ export interface SecurityPolicyUpdate {
   dataExportPolicy?: string;
 }
 
+export interface DeniedAccessHotKey {
+  actor: string;
+  count: number;
+}
+
+export interface DeniedAccessTopEntity {
+  entity: string;
+  count: number;
+  /** Resolved display name when the entity is a known user's entraObjectId; null otherwise */
+  displayName?: string | null;
+}
+
+export interface DeniedAccessSummary {
+  total24h: number;
+  threshold: number;
+  hotKeys: DeniedAccessHotKey[];
+  /** Top denied entity values from the audit_log entity column in the last 24 h. Only entities with a denial count >= threshold are included, matching the same minimum threshold applied to hotKeys. Entities below the threshold are excluded server-side to reduce false-alarm noise. */
+  topEntities: DeniedAccessTopEntity[];
+}
+
 export interface AuditEntry {
   id: number;
   action: string;
@@ -391,14 +494,54 @@ appId?: number;
 roleId?: number;
 };
 
+export type GetDeniedAccessSummaryParams = {
+/**
+ * Minimum denial count that triggers a warning for a key
+ */
+threshold?: number;
+};
+
 export type ListAuditLogParams = {
 limit?: number;
+/**
+ * Filter by entry category: all (default), access (ACCESS_ALLOWED + ACCESS_DENIED only), admin (non-access entries only)
+ */
+category?: ListAuditLogCategory;
+/**
+ * Filter access-check entries by outcome: all (default), allowed, denied
+ */
+outcome?: ListAuditLogOutcome;
 };
+
+export type ListAuditLogCategory = typeof ListAuditLogCategory[keyof typeof ListAuditLogCategory];
+
+
+export const ListAuditLogCategory = {
+  all: 'all',
+  access: 'access',
+  admin: 'admin',
+} as const;
+
+export type ListAuditLogOutcome = typeof ListAuditLogOutcome[keyof typeof ListAuditLogOutcome];
+
+
+export const ListAuditLogOutcome = {
+  all: 'all',
+  allowed: 'allowed',
+  denied: 'denied',
+} as const;
 
 export type ListSyncErrorsParams = {
 limit?: number;
 search?: string;
 entity?: string;
+};
+
+export type SearchWorkOrdersParams = {
+/**
+ * @minLength 1
+ */
+q: string;
 };
 
 export type CheckAccessParams = {

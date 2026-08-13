@@ -24,6 +24,11 @@ import type {
   AccessGrant,
   AccessGrantInput,
   AccessGrantUpdate,
+  AccessMappingAssignInput,
+  AccessMappingAssignResult,
+  AccessMappingEntry,
+  AccessMappingRemoveInput,
+  AccessMappingRemoveResult,
   ApiKeySummary,
   App,
   AppInput,
@@ -38,9 +43,11 @@ import type {
   CreateApiKeyInput,
   CreateRoleInput,
   CreatedApiKey,
+  DeniedAccessSummary,
   EntraSignIn,
   EntraUser,
   ErrorMessage,
+  GetDeniedAccessSummaryParams,
   HealthStatus,
   ListAccessGrantsParams,
   ListAuditLogParams,
@@ -54,6 +61,7 @@ import type {
   RoleAssignment,
   RoleAssignmentInput,
   SearchEntraUsersParams,
+  SearchWorkOrdersParams,
   SecurityPolicy,
   SecurityPolicyUpdate,
   Summary,
@@ -61,7 +69,10 @@ import type {
   SyncErrorList,
   User,
   UserInput,
-  UserUpdate
+  UserUpdate,
+  WorkOrderPurgeInput,
+  WorkOrderPurgeResult,
+  WorkOrderSummary
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1134,6 +1145,223 @@ export const useDeleteRoleAssignment = <TError = ErrorType<ErrorMessage>,
         TContext
       > => {
       return useMutation(getDeleteRoleAssignmentMutationOptions(options));
+    }
+
+export const getListAccessMappingUrl = () => {
+
+
+
+
+  return `/api/access-mapping`
+}
+
+/**
+ * @summary List user-to-app entitlement assignments
+ */
+export const listAccessMapping = async ( options?: RequestInit): Promise<AccessMappingEntry[]> => {
+
+  return customFetch<AccessMappingEntry[]>(getListAccessMappingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAccessMappingQueryKey = () => {
+    return [
+    `/api/access-mapping`
+    ] as const;
+    }
+
+
+export const getListAccessMappingQueryOptions = <TData = Awaited<ReturnType<typeof listAccessMapping>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAccessMapping>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAccessMappingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAccessMapping>>> = ({ signal }) => listAccessMapping({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAccessMapping>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAccessMappingQueryResult = NonNullable<Awaited<ReturnType<typeof listAccessMapping>>>
+export type ListAccessMappingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List user-to-app entitlement assignments
+ */
+
+export function useListAccessMapping<TData = Awaited<ReturnType<typeof listAccessMapping>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAccessMapping>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAccessMappingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAssignAccessMappingUrl = () => {
+
+
+
+
+  return `/api/access-mapping/assign`
+}
+
+/**
+ * @summary Grant or update app access for one or more users
+ */
+export const assignAccessMapping = async (accessMappingAssignInput: AccessMappingAssignInput, options?: RequestInit): Promise<AccessMappingAssignResult> => {
+
+  return customFetch<AccessMappingAssignResult>(getAssignAccessMappingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accessMappingAssignInput)
+  }
+);}
+
+
+
+
+export const getAssignAccessMappingMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignAccessMapping>>, TError,{data: BodyType<AccessMappingAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignAccessMapping>>, TError,{data: BodyType<AccessMappingAssignInput>}, TContext> => {
+
+const mutationKey = ['assignAccessMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignAccessMapping>>, {data: BodyType<AccessMappingAssignInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  assignAccessMapping(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignAccessMappingMutationResult = NonNullable<Awaited<ReturnType<typeof assignAccessMapping>>>
+    export type AssignAccessMappingMutationBody = BodyType<AccessMappingAssignInput>
+    export type AssignAccessMappingMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Grant or update app access for one or more users
+ */
+export const useAssignAccessMapping = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignAccessMapping>>, TError,{data: BodyType<AccessMappingAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignAccessMapping>>,
+        TError,
+        {data: BodyType<AccessMappingAssignInput>},
+        TContext
+      > => {
+      return useMutation(getAssignAccessMappingMutationOptions(options));
+    }
+
+export const getRemoveAccessMappingUrl = () => {
+
+
+
+
+  return `/api/access-mapping/remove`
+}
+
+/**
+ * @summary Remove app access for one or more users
+ */
+export const removeAccessMapping = async (accessMappingRemoveInput: AccessMappingRemoveInput, options?: RequestInit): Promise<AccessMappingRemoveResult> => {
+
+  return customFetch<AccessMappingRemoveResult>(getRemoveAccessMappingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accessMappingRemoveInput)
+  }
+);}
+
+
+
+
+export const getRemoveAccessMappingMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeAccessMapping>>, TError,{data: BodyType<AccessMappingRemoveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeAccessMapping>>, TError,{data: BodyType<AccessMappingRemoveInput>}, TContext> => {
+
+const mutationKey = ['removeAccessMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeAccessMapping>>, {data: BodyType<AccessMappingRemoveInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  removeAccessMapping(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveAccessMappingMutationResult = NonNullable<Awaited<ReturnType<typeof removeAccessMapping>>>
+    export type RemoveAccessMappingMutationBody = BodyType<AccessMappingRemoveInput>
+    export type RemoveAccessMappingMutationError = ErrorType<ErrorMessage>
+
+    /**
+ * @summary Remove app access for one or more users
+ */
+export const useRemoveAccessMapping = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeAccessMapping>>, TError,{data: BodyType<AccessMappingRemoveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeAccessMapping>>,
+        TError,
+        {data: BodyType<AccessMappingRemoveInput>},
+        TContext
+      > => {
+      return useMutation(getRemoveAccessMappingMutationOptions(options));
     }
 
 export const getListAppsUrl = () => {
@@ -2239,6 +2467,90 @@ export const useUpdateSecurityPolicy = <TError = ErrorType<ErrorMessage>,
       return useMutation(getUpdateSecurityPolicyMutationOptions(options));
     }
 
+export const getGetDeniedAccessSummaryUrl = (params?: GetDeniedAccessSummaryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/denied-access-summary?${stringifiedParams}` : `/api/denied-access-summary`
+}
+
+/**
+ * @summary Count ACCESS_DENIED events in the last 24 h, grouped by actor
+ */
+export const getDeniedAccessSummary = async (params?: GetDeniedAccessSummaryParams, options?: RequestInit): Promise<DeniedAccessSummary> => {
+
+  return customFetch<DeniedAccessSummary>(getGetDeniedAccessSummaryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeniedAccessSummaryQueryKey = (params?: GetDeniedAccessSummaryParams,) => {
+    return [
+    `/api/denied-access-summary`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDeniedAccessSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getDeniedAccessSummary>>, TError = ErrorType<unknown>>(params?: GetDeniedAccessSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeniedAccessSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeniedAccessSummaryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeniedAccessSummary>>> = ({ signal }) => getDeniedAccessSummary(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeniedAccessSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeniedAccessSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getDeniedAccessSummary>>>
+export type GetDeniedAccessSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Count ACCESS_DENIED events in the last 24 h, grouped by actor
+ */
+
+export function useGetDeniedAccessSummary<TData = Awaited<ReturnType<typeof getDeniedAccessSummary>>, TError = ErrorType<unknown>>(
+ params?: GetDeniedAccessSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeniedAccessSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeniedAccessSummaryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListAuditLogUrl = (params?: ListAuditLogParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -2483,6 +2795,230 @@ export function useListSyncEntities<TData = Awaited<ReturnType<typeof listSyncEn
 
 
 
+
+export const getSearchWorkOrdersUrl = (params: SearchWorkOrdersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/work-order-purge/search?${stringifiedParams}` : `/api/work-order-purge/search`
+}
+
+/**
+ * @summary Search D365 F&O production orders in the staging mirror by order number
+ */
+export const searchWorkOrders = async (params: SearchWorkOrdersParams, options?: RequestInit): Promise<WorkOrderSummary[]> => {
+
+  return customFetch<WorkOrderSummary[]>(getSearchWorkOrdersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchWorkOrdersQueryKey = (params?: SearchWorkOrdersParams,) => {
+    return [
+    `/api/work-order-purge/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchWorkOrdersQueryOptions = <TData = Awaited<ReturnType<typeof searchWorkOrders>>, TError = ErrorType<unknown>>(params: SearchWorkOrdersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchWorkOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchWorkOrdersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchWorkOrders>>> = ({ signal }) => searchWorkOrders(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchWorkOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchWorkOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof searchWorkOrders>>>
+export type SearchWorkOrdersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Search D365 F&O production orders in the staging mirror by order number
+ */
+
+export function useSearchWorkOrders<TData = Awaited<ReturnType<typeof searchWorkOrders>>, TError = ErrorType<unknown>>(
+ params: SearchWorkOrdersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchWorkOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchWorkOrdersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewWorkOrderPurgeUrl = () => {
+
+
+
+
+  return `/api/work-order-purge/preview`
+}
+
+/**
+ * @summary Dry-run purge — count rows that would be deleted per staging table
+ */
+export const previewWorkOrderPurge = async (workOrderPurgeInput: WorkOrderPurgeInput, options?: RequestInit): Promise<WorkOrderPurgeResult> => {
+
+  return customFetch<WorkOrderPurgeResult>(getPreviewWorkOrderPurgeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workOrderPurgeInput)
+  }
+);}
+
+
+
+
+export const getPreviewWorkOrderPurgeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewWorkOrderPurge>>, TError,{data: BodyType<WorkOrderPurgeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewWorkOrderPurge>>, TError,{data: BodyType<WorkOrderPurgeInput>}, TContext> => {
+
+const mutationKey = ['previewWorkOrderPurge'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewWorkOrderPurge>>, {data: BodyType<WorkOrderPurgeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewWorkOrderPurge(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewWorkOrderPurgeMutationResult = NonNullable<Awaited<ReturnType<typeof previewWorkOrderPurge>>>
+    export type PreviewWorkOrderPurgeMutationBody = BodyType<WorkOrderPurgeInput>
+    export type PreviewWorkOrderPurgeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Dry-run purge — count rows that would be deleted per staging table
+ */
+export const usePreviewWorkOrderPurge = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewWorkOrderPurge>>, TError,{data: BodyType<WorkOrderPurgeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewWorkOrderPurge>>,
+        TError,
+        {data: BodyType<WorkOrderPurgeInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewWorkOrderPurgeMutationOptions(options));
+    }
+
+export const getExecuteWorkOrderPurgeUrl = () => {
+
+
+
+
+  return `/api/work-order-purge/execute`
+}
+
+/**
+ * @summary Delete all staging rows for the given production orders (single transaction)
+ */
+export const executeWorkOrderPurge = async (workOrderPurgeInput: WorkOrderPurgeInput, options?: RequestInit): Promise<WorkOrderPurgeResult> => {
+
+  return customFetch<WorkOrderPurgeResult>(getExecuteWorkOrderPurgeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workOrderPurgeInput)
+  }
+);}
+
+
+
+
+export const getExecuteWorkOrderPurgeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeWorkOrderPurge>>, TError,{data: BodyType<WorkOrderPurgeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof executeWorkOrderPurge>>, TError,{data: BodyType<WorkOrderPurgeInput>}, TContext> => {
+
+const mutationKey = ['executeWorkOrderPurge'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof executeWorkOrderPurge>>, {data: BodyType<WorkOrderPurgeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  executeWorkOrderPurge(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExecuteWorkOrderPurgeMutationResult = NonNullable<Awaited<ReturnType<typeof executeWorkOrderPurge>>>
+    export type ExecuteWorkOrderPurgeMutationBody = BodyType<WorkOrderPurgeInput>
+    export type ExecuteWorkOrderPurgeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete all staging rows for the given production orders (single transaction)
+ */
+export const useExecuteWorkOrderPurge = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeWorkOrderPurge>>, TError,{data: BodyType<WorkOrderPurgeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof executeWorkOrderPurge>>,
+        TError,
+        {data: BodyType<WorkOrderPurgeInput>},
+        TContext
+      > => {
+      return useMutation(getExecuteWorkOrderPurgeMutationOptions(options));
+    }
 
 export const getCheckAccessUrl = (params: CheckAccessParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -12,4 +12,6 @@ export interface Role {
   description: string;
   userCount: number;
   grantCount: number;
+  appId?: number | null;
+  isEntitlement: boolean;
 }

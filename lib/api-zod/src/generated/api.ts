@@ -174,7 +174,9 @@ export const ListRolesResponseItem = zod.object({
   "name": zod.string(),
   "description": zod.string(),
   "userCount": zod.number(),
-  "grantCount": zod.number()
+  "grantCount": zod.number(),
+  "appId": zod.number().nullish(),
+  "isEntitlement": zod.boolean()
 })
 export const ListRolesResponse = zod.array(ListRolesResponseItem)
 
@@ -195,7 +197,9 @@ export const CreateRoleResponse = zod.object({
   "name": zod.string(),
   "description": zod.string(),
   "userCount": zod.number(),
-  "grantCount": zod.number()
+  "grantCount": zod.number(),
+  "appId": zod.number().nullish(),
+  "isEntitlement": zod.boolean()
 })
 
 
@@ -257,6 +261,61 @@ export const DeleteRoleAssignmentParams = zod.object({
 })
 
 export const DeleteRoleAssignmentResponse = zod.void()
+
+
+/**
+ * @summary List user-to-app entitlement assignments
+ */
+export const ListAccessMappingResponseItem = zod.object({
+  "assignmentId": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "userEmail": zod.string(),
+  "appId": zod.number(),
+  "appName": zod.string(),
+  "level": zod.enum(['Read Only', 'Read / Write']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListAccessMappingResponse = zod.array(ListAccessMappingResponseItem)
+
+
+/**
+ * @summary Grant or update app access for one or more users
+ */
+
+
+
+
+export const AssignAccessMappingBody = zod.object({
+  "userIds": zod.array(zod.number()).min(1),
+  "appIds": zod.array(zod.number()).min(1),
+  "level": zod.enum(['Read Only', 'Read / Write'])
+})
+
+export const AssignAccessMappingResponse = zod.object({
+  "assigned": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number()
+})
+
+
+/**
+ * @summary Remove app access for one or more users
+ */
+
+
+
+
+export const RemoveAccessMappingBody = zod.object({
+  "userIds": zod.array(zod.number()).min(1),
+  "appIds": zod.array(zod.number()).min(1)
+})
+
+export const RemoveAccessMappingResponse = zod.object({
+  "removed": zod.number()
+})
 
 
 /**
@@ -533,12 +592,40 @@ export const UpdateSecurityPolicyResponse = zod.object({
 
 
 /**
+ * @summary Count ACCESS_DENIED events in the last 24 h, grouped by actor
+ */
+export const getDeniedAccessSummaryQueryThresholdDefault = 5;
+
+export const GetDeniedAccessSummaryQueryParams = zod.object({
+  "threshold": zod.coerce.number().default(getDeniedAccessSummaryQueryThresholdDefault).describe('Minimum denial count that triggers a warning for a key')
+})
+
+export const GetDeniedAccessSummaryResponse = zod.object({
+  "total24h": zod.number(),
+  "threshold": zod.number(),
+  "hotKeys": zod.array(zod.object({
+  "actor": zod.string(),
+  "count": zod.number()
+})),
+  "topEntities": zod.array(zod.object({
+  "entity": zod.string(),
+  "count": zod.number(),
+  "displayName": zod.string().nullish().describe('Resolved display name when the entity is a known user\'s entraObjectId; null otherwise')
+})).describe('Top denied entity values from the audit_log entity column in the last 24 h. Only entities with a denial count >= threshold are included, matching the same minimum threshold applied to hotKeys. Entities below the threshold are excluded server-side to reduce false-alarm noise.\n')
+})
+
+
+/**
  * @summary List audit log entries, newest first
  */
 export const listAuditLogQueryLimitDefault = 50;
+export const listAuditLogQueryCategoryDefault = `all`;
+export const listAuditLogQueryOutcomeDefault = `all`;
 
 export const ListAuditLogQueryParams = zod.object({
-  "limit": zod.coerce.number().default(listAuditLogQueryLimitDefault)
+  "limit": zod.coerce.number().default(listAuditLogQueryLimitDefault),
+  "category": zod.enum(['all', 'access', 'admin']).default(listAuditLogQueryCategoryDefault).describe('Filter by entry category: all (default), access (ACCESS_ALLOWED + ACCESS_DENIED only), admin (non-access entries only)'),
+  "outcome": zod.enum(['all', 'allowed', 'denied']).default(listAuditLogQueryOutcomeDefault).describe('Filter access-check entries by outcome: all (default), allowed, denied')
 })
 
 export const ListAuditLogResponseItem = zod.object({
@@ -584,6 +671,67 @@ export const ListSyncEntitiesResponseItem = zod.object({
   "uniqueErrors": zod.number()
 })
 export const ListSyncEntitiesResponse = zod.array(ListSyncEntitiesResponseItem)
+
+
+/**
+ * @summary Search D365 F&O production orders in the staging mirror by order number
+ */
+
+
+
+export const SearchWorkOrdersQueryParams = zod.object({
+  "q": zod.coerce.string().min(1)
+})
+
+export const SearchWorkOrdersResponseItem = zod.object({
+  "orderNumber": zod.string(),
+  "name": zod.string(),
+  "itemNumber": zod.string(),
+  "status": zod.string(),
+  "scheduledDate": zod.string().nullish(),
+  "dataAreaId": zod.string()
+})
+export const SearchWorkOrdersResponse = zod.array(SearchWorkOrdersResponseItem)
+
+
+/**
+ * @summary Dry-run purge — count rows that would be deleted per staging table
+ */
+
+
+
+
+export const PreviewWorkOrderPurgeBody = zod.object({
+  "orderNumbers": zod.array(zod.string().min(1)).min(1)
+})
+
+export const PreviewWorkOrderPurgeResponse = zod.object({
+  "dryRun": zod.boolean(),
+  "dataAreaId": zod.string(),
+  "orderNumbers": zod.array(zod.string()),
+  "counts": zod.record(zod.string(), zod.number()),
+  "totalRows": zod.number()
+})
+
+
+/**
+ * @summary Delete all staging rows for the given production orders (single transaction)
+ */
+
+
+
+
+export const ExecuteWorkOrderPurgeBody = zod.object({
+  "orderNumbers": zod.array(zod.string().min(1)).min(1)
+})
+
+export const ExecuteWorkOrderPurgeResponse = zod.object({
+  "dryRun": zod.boolean(),
+  "dataAreaId": zod.string(),
+  "orderNumbers": zod.array(zod.string()),
+  "counts": zod.record(zod.string(), zod.number()),
+  "totalRows": zod.number()
+})
 
 
 /**

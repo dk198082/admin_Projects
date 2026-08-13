@@ -5,7 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ListAuditLogCategory } from './listAuditLogCategory';
+import type { ListAuditLogOutcome } from './listAuditLogOutcome';
 
 export type ListAuditLogParams = {
 limit?: number;
+/**
+ * Filter by entry category: all (default), access (ACCESS_ALLOWED + ACCESS_DENIED only), admin (non-access entries only)
+ */
+category?: ListAuditLogCategory;
+/**
+ * Filter access-check entries by outcome: all (default), allowed, denied
+ */
+outcome?: ListAuditLogOutcome;
 };
