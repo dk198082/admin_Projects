@@ -7,10 +7,12 @@ import { Layout } from "@/components/Layout";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Users from "@/pages/Users";
+import AccessMapping from "@/pages/AccessMapping";
 import Permissions from "@/pages/Permissions";
 import Security from "@/pages/Security";
 import Audit from "@/pages/Audit";
 import SyncErrors from "@/pages/SyncErrors";
+import WorkOrderPurge from "@/pages/WorkOrderPurge";
 
 const queryClient = new QueryClient();
 
@@ -62,10 +64,12 @@ function Router() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/users" component={Users} />
+          <Route path="/access-mapping" component={AccessMapping} />
           <Route path="/permissions" component={Permissions} />
           <Route path="/security" component={Security} />
           <Route path="/audit" component={Audit} />
           <Route path="/sync-errors" component={SyncErrors} />
+          <Route path="/work-order-purge" component={WorkOrderPurge} />
           <Route component={NotFound} />
         </Switch>
       </Layout>

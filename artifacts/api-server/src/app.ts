@@ -1,3 +1,5 @@
+import path from "node:path";
+import fs from "node:fs";
 import express, {
   type Express,
   type Request,
@@ -84,6 +86,34 @@ app.use(
 );
 
 app.use("/api", router);
+
+// --- AZURE DEPLOYMENT ---------------------------------------------------
+// Optional single-service mode: if STATIC_DIR points at the built frontend
+// (artifacts/admin-console/dist/public), this API server also serves it, so
+// the whole app runs as ONE Azure App Service / Container Apps instance on
+// ONE origin. That keeps the session cookie same-site/same-origin and avoids
+// needing a second Azure resource (the existing `cors({ origin: true,
+// credentials: true })` above already reflects any origin, but same-origin
+// deployment means the browser never issues a cross-origin request at all).
+// Unset in local dev (the Vite dev server serves the frontend on its own
+// port instead) and set by ./Dockerfile / AZURE_DEPLOYMENT.md in production.
+const staticDir = process.env.STATIC_DIR;
+if (staticDir) {
+  const resolvedStaticDir = path.resolve(staticDir);
+  if (!fs.existsSync(path.join(resolvedStaticDir, "index.html"))) {
+    throw new Error(
+      `STATIC_DIR is set to "${resolvedStaticDir}" but no index.html was found there. ` +
+        "Build the frontend first (see AZURE_DEPLOYMENT.md).",
+    );
+  }
+  app.use(express.static(resolvedStaticDir));
+  // SPA fallback: any non-API, non-file GET request returns index.html so
+  // client-side routing can handle the path. Registered after "/api" so API
+  // routes/404s above are never shadowed by this.
+  app.get(/^(?!\/api\/).*/, (_req, res) => {
+    res.sendFile(path.join(resolvedStaticDir, "index.html"));
+  });
+}
 
 app.use((err: unknown, req: Request, res: Response, next: NextFunction): void => {
   if (res.headersSent) {

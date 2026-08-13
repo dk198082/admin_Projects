@@ -6,6 +6,8 @@ import {
   Lock, 
   ActivitySquare,
   AlertTriangle,
+  AppWindow,
+  Trash2,
   PanelLeftClose,
   PanelLeft
 } from "lucide-react";
@@ -24,10 +26,12 @@ interface LayoutProps {
 const navItems = [
   { href: "/", label: "Dashboard", icon: ShieldCheck },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/access-mapping", label: "Map User Security Access", icon: AppWindow },
   { href: "/permissions", label: "Permissions", icon: Key },
   { href: "/security", label: "Security Policies", icon: Lock },
   { href: "/audit", label: "Audit Log", icon: ActivitySquare },
   { href: "/sync-errors", label: "Data Sync Error Log", icon: AlertTriangle },
+  { href: "/work-order-purge", label: "Work Order Purge", icon: Trash2 },
 ];
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {

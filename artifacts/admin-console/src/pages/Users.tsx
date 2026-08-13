@@ -2,21 +2,16 @@ import { useEffect, useState } from "react";
 import { 
   useListUsers, 
   getListUsersQueryKey, 
-  useListRoles, 
-  getListRolesQueryKey,
   useCreateUser,
   useUpdateUser,
   useDeleteUser,
-  useCreateRoleAssignment,
-  useDeleteRoleAssignment,
-  useBulkCreateRoleAssignments,
   useBulkDeleteUsers,
   useSearchEntraUsers,
   getSearchEntraUsersQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Search, MoreVertical, Shield, Trash2, Edit2, Check, X, Key, DownloadCloud } from "lucide-react";
+import { Plus, Search, MoreVertical, Trash2, Edit2, Check, X, Key, DownloadCloud } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
@@ -49,17 +44,10 @@ export default function Users() {
   const { data: users, isLoading } = useListUsers({
     query: { queryKey: getListUsersQueryKey() }
   });
-  
-  const { data: roles } = useListRoles({
-    query: { queryKey: getListRolesQueryKey() }
-  });
 
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
-  const createAssignment = useCreateRoleAssignment();
-  const deleteAssignment = useDeleteRoleAssignment();
-  const bulkAssign = useBulkCreateRoleAssignments();
   const bulkDelete = useBulkDeleteUsers();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -92,8 +80,6 @@ export default function Users() {
   );
 
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
-  const [isAssignOpen, setIsAssignOpen] = useState(false);
-  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
 
   const toggleUserSelected = (id: number, checked: boolean) => {
     setSelectedUserIds(prev => {
@@ -101,34 +87,6 @@ export default function Users() {
       if (checked) next.add(id); else next.delete(id);
       return next;
     });
-  };
-
-  const toggleRoleSelected = (id: number, checked: boolean) => {
-    setSelectedRoleIds(prev => {
-      const next = new Set(prev);
-      if (checked) next.add(id); else next.delete(id);
-      return next;
-    });
-  };
-
-  const handleBulkAssign = () => {
-    bulkAssign.mutate(
-      { data: { userIds: [...selectedUserIds], roleIds: [...selectedRoleIds] } },
-      {
-        onSuccess: (result) => {
-          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListRolesQueryKey() });
-          setIsAssignOpen(false);
-          setSelectedRoleIds(new Set());
-          setSelectedUserIds(new Set());
-          toast({
-            title: `${result.created} role assignment${result.created === 1 ? "" : "s"} added`,
-            description: result.skipped > 0 ? `${result.skipped} already existed and were skipped.` : undefined,
-          });
-        },
-        onError: () => toast({ title: "Failed to assign roles", variant: "destructive" }),
-      },
-    );
   };
 
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -141,7 +99,6 @@ export default function Users() {
       {
         onSuccess: (result) => {
           queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListRolesQueryKey() });
           setSelectedUserIds(new Set());
           setIsBulkDeleteOpen(false);
           toast({ title: `${result.deleted} user${result.deleted === 1 ? "" : "s"} deleted` });
@@ -228,24 +185,12 @@ export default function Users() {
     });
   };
 
-  const toggleRole = (userId: number, roleId: number, assigned: boolean, assignmentId?: number) => {
-    if (assigned && assignmentId) {
-      deleteAssignment.mutate({ id: assignmentId }, {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() })
-      });
-    } else if (!assigned) {
-      createAssignment.mutate({ data: { userId, roleId } }, {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() })
-      });
-    }
-  };
-
   return (
     <div className="p-8 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Users</h1>
-          <p className="text-muted-foreground mt-1">Manage personnel and assign security roles.</p>
+          <p className="text-muted-foreground mt-1">Manage employees and review current security access.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={() => setIsImportOpen(true)}>
@@ -263,7 +208,7 @@ export default function Users() {
         </div>
       </div>
 
-      <ImportEntraUsersDialog open={isImportOpen} onOpenChange={setIsImportOpen} roles={roles} />
+      <ImportEntraUsersDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
 
       <div className="border rounded-md bg-card overflow-hidden shadow-sm">
         <div className="p-4 border-b border-border/50 bg-muted/20 flex items-center justify-between gap-4">
@@ -282,14 +227,6 @@ export default function Users() {
                 {selectedUserIds.size} selected
               </span>
             )}
-            <Button
-              variant="secondary"
-              disabled={selectedUserIds.size === 0}
-              onClick={() => { setSelectedRoleIds(new Set()); setIsAssignOpen(true); }}
-            >
-              <Shield className="h-4 w-4 mr-2" />
-              Assign Roles
-            </Button>
             <Button
               variant="destructive"
               disabled={selectedUserIds.size === 0}
@@ -321,7 +258,7 @@ export default function Users() {
               </TableHead>
               <TableHead>User</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Roles</TableHead>
+              <TableHead>Access / Entitlements</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
@@ -393,20 +330,6 @@ export default function Users() {
                         {user.status === "active" ? <X className="h-4 w-4 mr-2" /> : <Check className="h-4 w-4 mr-2" />} 
                         {user.status === "active" ? "Disable" : "Enable"}
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Manage Roles</DropdownMenuLabel>
-                      {roles?.map(role => {
-                        const assignment = user.roles.find(r => r.roleId === role.id);
-                        return (
-                          <DropdownMenuCheckboxItem
-                            key={role.id}
-                            checked={!!assignment}
-                            onCheckedChange={(checked: boolean) => toggleRole(user.id, role.id, !checked, assignment?.assignmentId)}
-                          >
-                            {role.name}
-                          </DropdownMenuCheckboxItem>
-                        );
-                      })}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmDeleteUser({ id: user.id, name: user.name, roleCount: user.roles.length })}>
                         <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -506,49 +429,6 @@ export default function Users() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={isAssignOpen} onOpenChange={(o) => { if (!o) setIsAssignOpen(false); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Roles</DialogTitle>
-            <DialogDescription>
-              Grant the selected role{selectedRoleIds.size === 1 ? "" : "s"} to{" "}
-              {selectedUserIds.size} selected user{selectedUserIds.size === 1 ? "" : "s"}. Existing
-              assignments are kept as-is.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-2 space-y-2 max-h-72 overflow-y-auto">
-            {roles?.map(role => (
-              <label
-                key={role.id}
-                className="flex items-center gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/40 transition-colors"
-              >
-                <Checkbox
-                  checked={selectedRoleIds.has(role.id)}
-                  onCheckedChange={(checked: boolean) => toggleRoleSelected(role.id, checked)}
-                />
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{role.name}</div>
-                  {role.description && (
-                    <div className="text-xs text-muted-foreground">{role.description}</div>
-                  )}
-                </div>
-              </label>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleBulkAssign}
-              disabled={selectedRoleIds.size === 0 || bulkAssign.isPending}
-            >
-              {bulkAssign.isPending
-                ? "Assigning..."
-                : `Assign ${selectedRoleIds.size || ""} role${selectedRoleIds.size === 1 ? "" : "s"}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isCreateOpen || !!editingUser} onOpenChange={(o) => {
         if (!o) { setIsCreateOpen(false); setEditingUser(null); }

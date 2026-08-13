@@ -1,7 +1,14 @@
 import { Router, type IRouter } from "express";
 import * as oidcClient from "openid-client";
-import { eq } from "drizzle-orm";
-import { db, appUsersTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import {
+  db,
+  appUsersTable,
+  usersTable,
+  roleAssignmentsTable,
+  rolesTable,
+  appsTable,
+} from "@workspace/db";
 import { getOidcConfig, getRedirectUri } from "../lib/oidc";
 import { logAudit } from "../lib/audit";
 
@@ -29,14 +36,7 @@ router.get("/auth/login", async (req, res, next) => {
 
     req.session.codeVerifier = codeVerifier;
     req.session.oauthState = state;
-    
-     req.log.info(
-   {
-      sessionID: req.sessionID,
-      cookie: req.headers.cookie,
-    },
-  "LOGIN SESSION SAVED",
-);
+
     const url = oidcClient.buildAuthorizationUrl(config, {
       redirect_uri: getRedirectUri(req),
       scope: "openid profile email",
@@ -52,24 +52,10 @@ router.get("/auth/login", async (req, res, next) => {
 
 router.get("/auth/callback", async (req, res, next) => {
   try {
-
-      req.log.info(
-    {
-      sessionID: req.sessionID,
-      returnedState: req.query.state,
-      cookie: req.headers.cookie,
-    },
-    "AUTH CALLBACK SESSION",
-  );
-
     const config = await getOidcConfig();
     const { codeVerifier, oauthState } = req.session;
     if (!codeVerifier || !oauthState) {
-      const FRONTEND_URL =
-           process.env.FRONTEND_URL ?? "http://localhost:5175";
-      // res.redirect("/?auth_error=session_expired");
-      res.redirect(
-                 `${FRONTEND_URL}/?auth_error=session_expired`,);
+      res.redirect("/?auth_error=session_expired");
       return;
     }
 
@@ -92,6 +78,39 @@ router.get("/auth/callback", async (req, res, next) => {
       claims.email ?? claims.preferred_username ?? "unknown",
     );
     const name = String(claims.name ?? email);
+
+    // Gate login: user must have an active entitlement for the "Admin Console"
+    // app in the managed users / role-assignments system.
+    const [entitled] = await db
+      .select({ userId: usersTable.id })
+      .from(usersTable)
+      .innerJoin(roleAssignmentsTable, eq(roleAssignmentsTable.userId, usersTable.id))
+      .innerJoin(rolesTable, eq(roleAssignmentsTable.roleId, rolesTable.id))
+      .innerJoin(appsTable, eq(rolesTable.appId, appsTable.id))
+      .where(
+        and(
+          eq(usersTable.entraObjectId, entraObjectId),
+          eq(usersTable.status, "active"),
+          eq(rolesTable.isEntitlement, true),
+          eq(appsTable.name, "Admin Console"),
+        ),
+      )
+      .limit(1);
+
+    if (!entitled) {
+      req.log.warn(
+        { entraObjectId, email, name },
+        "Authenticated user denied: no Admin Console entitlement",
+      );
+      await logAudit(
+        "ACCESS_DENIED",
+        entraObjectId,
+        `${name} (${email}) denied Admin Console login — no entitlement assigned`,
+        name,
+      );
+      res.redirect("/?auth_error=not_authorized");
+      return;
+    }
 
     const [appUser] = await db
       .insert(appUsersTable)
@@ -121,17 +140,13 @@ router.get("/auth/callback", async (req, res, next) => {
   }
 });
 
-router.get("/me", (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-
+router.get("/auth/me", (req, res) => {
   if (!req.session.user) {
-    res.status(401).json({ error: "unauthenticated" });
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
-
-  res.status(200).json(req.session.user);
+  res.json(req.session.user);
 });
-
 
 router.post("/auth/logout", async (req, res) => {
   const name = req.session.user?.name;

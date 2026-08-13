@@ -25,6 +25,11 @@ import {
   DeleteResourceParams,
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
+import {
+  ensureEntitlementsForApp,
+  renameEntitlementsForApp,
+  grantEntitlementsForResource,
+} from "../lib/entitlements";
 
 const router: IRouter = Router();
 
@@ -60,12 +65,13 @@ router.post("/apps", async (req, res): Promise<void> => {
   const created = await db.transaction(async (tx) => {
     const [app] = await tx.insert(appsTable).values({ name }).returning();
     await tx.insert(securityPoliciesTable).values({ appId: app.id });
+    await ensureEntitlementsForApp(app.id, app.name, tx);
     return app;
   });
   await logAudit(
     "create",
     "App",
-    `Onboarded app ${name} with default security policy`,
+    `Onboarded app ${name} with default security policy and Read Only / Read / Write entitlement roles`,
     req.session.user?.name,
   );
   res.status(201).json(CreateAppResponse.parse({ ...created, resourceCount: 0 }));
@@ -111,6 +117,7 @@ router.patch("/apps/:id", async (req, res): Promise<void> => {
       .update(apiKeysTable)
       .set({ appName: name })
       .where(eq(apiKeysTable.appName, app.name));
+    await renameEntitlementsForApp(app.id, name, tx);
     return row;
   });
   const [{ count }] = await db
@@ -215,6 +222,7 @@ router.post("/resources", async (req, res): Promise<void> => {
       description: parsed.data.description?.trim() ?? "",
     })
     .returning();
+  await grantEntitlementsForResource(app.id, created.id);
   await logAudit(
     "create",
     "Resource",

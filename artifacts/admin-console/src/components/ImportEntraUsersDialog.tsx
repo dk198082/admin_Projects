@@ -29,7 +29,7 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  roles: Role[] | undefined;
+  roles?: Role[] | undefined;
 }
 
 export default function ImportEntraUsersDialog({ open, onOpenChange, roles }: Props) {
@@ -132,7 +132,7 @@ export default function ImportEntraUsersDialog({ open, onOpenChange, roles }: Pr
         <DialogHeader>
           <DialogTitle>Import Users from Azure Entra</DialogTitle>
           <DialogDescription>
-            Search your directory, select users, and optionally assign roles to all of them.
+            Search your directory and select users to import.
           </DialogDescription>
         </DialogHeader>
 
@@ -202,11 +202,11 @@ export default function ImportEntraUsersDialog({ open, onOpenChange, roles }: Pr
             </div>
           )}
 
-          <div>
-            <div className="text-sm font-medium mb-1.5">Assign roles to all imported users (optional)</div>
-            <div className="rounded-md border max-h-36 overflow-y-auto divide-y">
-              {roles?.length ? (
-                roles.map((r) => (
+          {roles && roles.length > 0 && (
+            <div>
+              <div className="text-sm font-medium mb-1.5">Assign roles to all imported users (optional)</div>
+              <div className="rounded-md border max-h-36 overflow-y-auto divide-y">
+                {roles.map((r) => (
                   <label key={r.id} className="flex items-center gap-3 p-2.5 hover:bg-muted/40 cursor-pointer">
                     <Checkbox
                       checked={roleIds.has(r.id)}
@@ -214,12 +214,10 @@ export default function ImportEntraUsersDialog({ open, onOpenChange, roles }: Pr
                     />
                     <span className="text-sm">{r.name}</span>
                   </label>
-                ))
-              ) : (
-                <div className="p-3 text-sm text-muted-foreground">No roles defined yet.</div>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter>

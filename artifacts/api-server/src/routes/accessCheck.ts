@@ -12,6 +12,7 @@ import {
   appsTable,
 } from "@workspace/db";
 import { CheckAccessQueryParams, CheckAccessResponse } from "@workspace/api-zod";
+import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
@@ -20,8 +21,19 @@ export function hashApiKey(key: string): string {
 }
 
 router.get("/access-check", async (req, res): Promise<void> => {
+  // Read raw query params early so they can be included in pre-auth audit entries.
+  const rawEntraObjectIdEarly =
+    typeof req.query.entraObjectId === "string" ? req.query.entraObjectId : "unknown";
+  const rawAppEarly = typeof req.query.app === "string" ? req.query.app : "unknown";
+
   const providedKey = req.header("x-api-key");
   if (!providedKey) {
+    await logAudit(
+      "ACCESS_DENIED",
+      rawEntraObjectIdEarly,
+      `key=missing app=${rawAppEarly} reason=Missing API key`,
+      "unknown",
+    );
     res.status(401).json({ error: "Missing API key (X-API-Key header)" });
     return;
   }
@@ -30,21 +42,27 @@ router.get("/access-check", async (req, res): Promise<void> => {
     .from(apiKeysTable)
     .where(and(eq(apiKeysTable.keyHash, hashApiKey(providedKey)), isNull(apiKeysTable.revokedAt)));
   if (!apiKey) {
+    // Log first 10 chars of the provided key as a fingerprint — never the full value.
+    const keyFingerprint = providedKey.slice(0, 10);
+    await logAudit(
+      "ACCESS_DENIED",
+      rawEntraObjectIdEarly,
+      `key=${keyFingerprint}… app=${rawAppEarly} reason=Invalid or revoked API key`,
+      `key fingerprint: ${keyFingerprint}`,
+    );
     res.status(401).json({ error: "Invalid or revoked API key" });
     return;
   }
 
-  const rawEntraObjectId = req.query.entraObjectId;
-  const rawApp = req.query.app;
-  if (typeof rawEntraObjectId !== "string" || rawEntraObjectId.trim() === "") {
+  if (typeof req.query.entraObjectId !== "string" || rawEntraObjectIdEarly.trim() === "") {
     res.status(400).json({ error: "Missing required query parameter: entraObjectId" });
     return;
   }
-  if (typeof rawApp !== "string" || rawApp.trim() === "") {
+  if (typeof req.query.app !== "string" || rawAppEarly.trim() === "") {
     res.status(400).json({ error: "Missing required query parameter: app" });
     return;
   }
-  const query = CheckAccessQueryParams.safeParse({ entraObjectId: rawEntraObjectId, app: rawApp });
+  const query = CheckAccessQueryParams.safeParse({ entraObjectId: rawEntraObjectIdEarly, app: rawAppEarly });
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
     return;
@@ -52,6 +70,12 @@ router.get("/access-check", async (req, res): Promise<void> => {
   const { entraObjectId, app } = query.data;
 
   if (apiKey.appName.trim().toLowerCase() !== app.trim().toLowerCase()) {
+    await logAudit(
+      "ACCESS_DENIED",
+      entraObjectId,
+      `key=${apiKey.keyPrefix} app=${app} reason=API key not authorized for app "${app}"`,
+      `API Key: ${apiKey.keyPrefix}`,
+    );
     res.status(403).json({ error: `This API key is not authorized for app "${app}"` });
     return;
   }
@@ -66,7 +90,13 @@ router.get("/access-check", async (req, res): Promise<void> => {
     .from(usersTable)
     .where(eq(usersTable.entraObjectId, entraObjectId));
 
-  const deny = (reason: string, extra?: { userName?: string; status?: string }) =>
+  const deny = async (reason: string, extra?: { userName?: string; status?: string }) => {
+    await logAudit(
+      "ACCESS_DENIED",
+      entraObjectId,
+      `key=${apiKey.keyPrefix} app=${app} reason=${reason}`,
+      `API Key: ${apiKey.keyPrefix}`,
+    );
     res.json(
       CheckAccessResponse.parse({
         allowed: false,
@@ -77,13 +107,14 @@ router.get("/access-check", async (req, res): Promise<void> => {
         permissions: [],
       }),
     );
+  };
 
   if (!user) {
-    deny("User is not registered in the Admin Console");
+    await deny("User is not registered in the Admin Console");
     return;
   }
   if (user.status !== "active") {
-    deny("User is disabled in the Admin Console", { userName: user.name, status: user.status });
+    await deny("User is disabled in the Admin Console", { userName: user.name, status: user.status });
     return;
   }
 
@@ -94,7 +125,7 @@ router.get("/access-check", async (req, res): Promise<void> => {
     .where(eq(roleAssignmentsTable.userId, user.id));
 
   if (roleRows.length === 0) {
-    deny("User has no roles assigned", { userName: user.name, status: user.status });
+    await deny("User has no roles assigned", { userName: user.name, status: user.status });
     return;
   }
 
@@ -116,7 +147,7 @@ router.get("/access-check", async (req, res): Promise<void> => {
   );
 
   if (matching.length === 0) {
-    deny(`User has no permissions for app "${app}"`, {
+    await deny(`User has no permissions for app "${app}"`, {
       userName: user.name,
       status: user.status,
     });
@@ -135,6 +166,12 @@ router.get("/access-check", async (req, res): Promise<void> => {
     }
   }
 
+  await logAudit(
+    "ACCESS_ALLOWED",
+    entraObjectId,
+    `key=${apiKey.keyPrefix} app=${app}`,
+    `API Key: ${apiKey.keyPrefix}`,
+  );
   res.json(
     CheckAccessResponse.parse({
       allowed: true,

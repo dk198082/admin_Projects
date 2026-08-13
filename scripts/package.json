@@ -6,7 +6,8 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "generate-spreadsheet": "tsx ./src/generate-roles-security-spreadsheet.ts"
+    "generate-spreadsheet": "tsx ./src/generate-roles-security-spreadsheet.ts",
+    "verify-access-mapping": "tsx ./src/verify-access-mapping-e2e.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",

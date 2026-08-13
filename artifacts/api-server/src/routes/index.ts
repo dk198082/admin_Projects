@@ -12,6 +12,8 @@ import authRouter from "./auth";
 import accessCheckRouter from "./accessCheck";
 import apiKeysRouter from "./apiKeys";
 import permissionMatrixRouter from "./permissionMatrix";
+import accessMappingRouter from "./accessMapping";
+import workOrderPurgeRouter from "./workOrderPurge";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -30,5 +32,7 @@ router.use(auditRouter);
 router.use(syncRouter);
 router.use(entraRouter);
 router.use(permissionMatrixRouter);
+router.use(accessMappingRouter);
+router.use(workOrderPurgeRouter);
 
 export default router;

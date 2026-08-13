@@ -52,11 +52,20 @@ export default function Landing() {
           Manage users, roles, permissions, and security policies for Production
           Shop Floor and Field Service Calendar — with a full audit trail.
         </p>
-        {authError && (
+        {authError === "not_authorized" ? (
+          <div className="mt-6 rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 max-w-md">
+            <p className="font-semibold">Access not granted</p>
+            <p className="mt-1 text-amber-200/80">
+              Your Microsoft account was recognised but you haven't been given
+              access to the Admin Console. Contact an administrator to be added
+              under <strong>Map User Security Access</strong>.
+            </p>
+          </div>
+        ) : authError ? (
           <div className="mt-6 rounded-md border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">
             Sign-in didn't complete ({authError.replaceAll("_", " ")}). Please try again.
           </div>
-        )}
+        ) : null}
         <div className="mt-8">
           <Button size="lg" onClick={signIn} className="gap-2 bg-white text-[hsl(220,50%,10%)] hover:bg-white/90">
             <MicrosoftLogo />

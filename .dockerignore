@@ -1,0 +1,18 @@
+# Dependencies and build output are regenerated inside the image.
+node_modules
+**/node_modules
+**/dist
+**/.generated
+
+# Not needed in the image / not relevant to a container build.
+.git
+.gitignore
+attached_assets
+docs
+*.md
+!AZURE_DEPLOYMENT.md
+
+# Local env files must never be baked into the image — real secrets are
+# supplied as Azure App Settings / Container Apps secrets at deploy time.
+.env
+.env.*
