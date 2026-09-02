@@ -9,6 +9,16 @@ import {
 
 const router: IRouter = Router();
 
+const syncErrorExclusions = sql`
+  lower(entity_set_name) NOT IN (
+    'opportunity',
+    'quote',
+    'quotedetails',
+    'salesorderssalesorderdetails'
+  )
+  AND (error_message IS NULL OR error_message NOT ILIKE '%connection error%')
+`;
+
 router.get("/sync/error-log", async (req, res): Promise<void> => {
   const query = ListSyncErrorsQueryParams.safeParse(req.query);
   if (!query.success) {
@@ -19,6 +29,10 @@ router.get("/sync/error-log", async (req, res): Promise<void> => {
   const search = query.data.search?.trim();
   const entity = query.data.entity?.trim();
   const conditions = [];
+  // Keep the log focused on the current and previous calendar day.
+  // This intentionally excludes anything from two or more days ago.
+  conditions.push(sql`created_on >= CURRENT_DATE - INTERVAL '1 day'`);
+  conditions.push(syncErrorExclusions);
   if (entity) {
     conditions.push(sql`entity_set_name = ${entity}`);
   }
@@ -91,6 +105,8 @@ router.get("/sync/entities", async (_req, res): Promise<void> => {
   const result = await db.execute(sql`
     SELECT entity_set_name, COUNT(DISTINCT record_id)::int + (COUNT(*) FILTER (WHERE record_id IS NULL) > 0)::int AS n
     FROM sync.error_log
+    WHERE created_on >= CURRENT_DATE - INTERVAL '1 day'
+      AND ${syncErrorExclusions}
     GROUP BY entity_set_name
     ORDER BY entity_set_name
   `);

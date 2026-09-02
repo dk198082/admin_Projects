@@ -2651,7 +2651,7 @@ export const getListSyncErrorsUrl = (params?: ListSyncErrorsParams,) => {
 }
 
 /**
- * @summary List data sync errors, unique per entity and record id, newest first
+ * @summary List current data sync errors, excluding selected entities and connection errors
  */
 export const listSyncErrors = async (params?: ListSyncErrorsParams, options?: RequestInit): Promise<SyncErrorList> => {
 
@@ -2698,7 +2698,7 @@ export type ListSyncErrorsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List data sync errors, unique per entity and record id, newest first
+ * @summary List current data sync errors, excluding selected entities and connection errors
  */
 
 export function useListSyncErrors<TData = Awaited<ReturnType<typeof listSyncErrors>>, TError = ErrorType<unknown>>(
@@ -2728,7 +2728,7 @@ export const getListSyncEntitiesUrl = () => {
 }
 
 /**
- * @summary List entities that have sync errors, with unique error counts
+ * @summary List non-excluded entities that have current sync errors, with unique error counts
  */
 export const listSyncEntities = async ( options?: RequestInit): Promise<SyncEntityCount[]> => {
 
@@ -2775,7 +2775,7 @@ export type ListSyncEntitiesQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List entities that have sync errors, with unique error counts
+ * @summary List non-excluded entities that have current sync errors, with unique error counts
  */
 
 export function useListSyncEntities<TData = Awaited<ReturnType<typeof listSyncEntities>>, TError = ErrorType<unknown>>(

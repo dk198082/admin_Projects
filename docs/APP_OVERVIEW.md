@@ -419,15 +419,13 @@ Removes all entitlement role assignments (both levels) for the given users × ap
 
 ---
 
-## 8. Permissions (Roles, Resources & Access Grants)
+## 8. Permissions APIs (No Dedicated Page)
 
-**Route:** `/permissions`  
+**Admin Console route:** No dedicated page; the former `/permissions` page has been removed.
 **API prefix:** `/api/apps`, `/api/resources`, `/api/roles`, `/api/access-grants`
 
-This page is the low-level management surface for the full access model. Operators can:
-- Define **applications** and their **resources**.
-- Create **roles** and attach **access grants** to them.
-- Export a **permission matrix** spreadsheet.
+These endpoints remain available to support the entitlement and access-check model. Application
+onboarding is available from the **Security Policies** page.
 
 ### 8.1 Apps
 
@@ -476,7 +474,10 @@ Generates an Excel (.xlsx) workbook via `@workspace/permission-matrix` that cros
 **Route:** `/security`  
 **API prefix:** `/api/security-policies`
 
-One security policy is automatically created when an app is onboarded. Operators can edit the policy fields to document (and enforce at the application layer) the security configuration for that app.
+Operators can onboard an application using **Add App** on this page. A security policy and the
+default Read Only / Read / Write entitlement roles are created automatically. Operators can then
+edit the policy fields to document (and enforce at the application layer) the security configuration
+for that app.
 
 ### Policy fields
 
@@ -548,7 +549,7 @@ The audit log is an append-only record of every administrative action. Every mut
 **Route:** `/sync-errors`  
 **API prefix:** `/api/sync/error-log`, `/api/sync/entities`
 
-This page provides a read-only view of Dynamics 365 / Dataverse integration sync errors stored in a separate `sync.error_log` table in the same PostgreSQL instance. The Admin Console does not own or write to this table — it only reads it.
+This page provides a read-only view of Dynamics 365 / Dataverse integration sync errors stored in a separate `sync.error_log` table in the same PostgreSQL instance. It only shows errors from today and yesterday; older entries are excluded. Opportunity, quote, quotedetails, and salesorderssalesorderdetails entities are excluded, as are messages containing "connection error". The Admin Console does not own or write to this table — it only reads it.
 
 ### Data flow — load Sync Errors
 
@@ -556,11 +557,14 @@ This page provides a read-only view of Dynamics 365 / Dataverse integration sync
 
 | Step | Action |
 |---|---|
-| 1 | Accepts optional `limit` (1–500, default 100), `search` (ILIKE on entity name, record ID, error message), and `entity` (exact entity set name filter) |
-| 2 | Issues two concurrent queries to `sync.error_log`: one for paginated results (deduplicating by latest error per entity+record_id), one for total unique-error count |
-| 3 | Returns `{ entries: [...], totalUnique: N }` |
+| 1 | Restricts results to `created_on >= CURRENT_DATE - INTERVAL '1 day'`, covering today and yesterday |
+| 2 | Excludes `opportunity`, `quote`, `quotedetails`, and `salesorderssalesorderdetails` entities, plus messages containing `"connection error"` |
+| 3 | Accepts optional `limit` (1–500, default 100), `search` (ILIKE on entity name, record ID, error message), and `entity` (exact entity set name filter) |
+| 4 | Issues two concurrent queries to `sync.error_log`: one for paginated results (deduplicating by latest error per entity+record_id), one for total unique-error count |
+| 5 | Returns `{ entries: [...], totalUnique: N }` |
 
-`GET /api/sync/entities` — lists distinct `entity_set_name` values with their error counts, used to populate the entity filter dropdown.
+`GET /api/sync/entities` — lists distinct, non-excluded `entity_set_name` values with their error
+counts for today and yesterday, used to populate the entity filter dropdown.
 
 Both endpoints are **read-only**. No audit entries are written.
 

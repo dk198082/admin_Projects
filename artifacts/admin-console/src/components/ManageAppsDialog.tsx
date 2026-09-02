@@ -68,7 +68,8 @@ export function AddAppDialog({
           onOpenChange(false);
           toast({
             title: `App "${app.name}" onboarded`,
-            description: "A default security policy was created. Now add its resources.",
+            description:
+              "A default security policy plus Read Only and Read / Write entitlement roles were created. Now add its resources.",
           });
           onCreated?.(app.id);
         },
@@ -84,8 +85,9 @@ export function AddAppDialog({
         <DialogHeader>
           <DialogTitle>Add Application</DialogTitle>
           <DialogDescription>
-            Onboard a new app. A default security policy is created automatically — then add the
-            app's resources (tabs, forms, tables) so roles can be granted access.
+            Onboard a new app. A default security policy and Read Only / Read / Write entitlement
+            roles are created automatically. Then add the app's resources (tabs, forms, tables) so
+            users can be granted access from Map User Security Access.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2 py-2">

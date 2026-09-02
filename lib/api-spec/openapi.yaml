@@ -762,7 +762,7 @@ paths:
     get:
       operationId: listSyncErrors
       tags: [sync]
-      summary: List data sync errors, unique per entity and record id, newest first
+      summary: List current data sync errors, excluding selected entities and connection errors
       parameters:
         - name: limit
           in: query
@@ -787,7 +787,7 @@ paths:
     get:
       operationId: listSyncEntities
       tags: [sync]
-      summary: List entities that have sync errors, with unique error counts
+      summary: List non-excluded entities that have current sync errors, with unique error counts
       responses:
         "200":
           description: Entities

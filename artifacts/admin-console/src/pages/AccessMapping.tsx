@@ -62,7 +62,9 @@ export default function AccessMapping() {
   const { data: mapping, isLoading } = useListAccessMapping({
     query: { queryKey: getListAccessMappingQueryKey() },
   });
-  const { data: users } = useListUsers({ query: { queryKey: getListUsersQueryKey() } });
+  const { data: users, isLoading: isUsersLoading } = useListUsers({
+    query: { queryKey: getListUsersQueryKey() },
+  });
   const { data: apps } = useListApps({ query: { queryKey: getListAppsQueryKey() } });
 
   const assign = useAssignAccessMapping();
@@ -98,13 +100,20 @@ export default function AccessMapping() {
   // ── Derived data ────────────────────────────────────────────────────────────
   const byUser = useMemo(() => {
     const m = new Map<number, { name: string; email: string; entries: AccessMappingEntry[] }>();
+
+    // Start with every user so newly-created users appear here even before
+    // their first application entitlement is assigned.
+    for (const user of users ?? []) {
+      m.set(user.id, { name: user.name, email: user.email, entries: [] });
+    }
+
     for (const e of mapping ?? []) {
       const g = m.get(e.userId) ?? { name: e.userName, email: e.userEmail, entries: [] };
       g.entries.push(e);
       m.set(e.userId, g);
     }
     return [...m.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
-  }, [mapping]);
+  }, [mapping, users]);
 
   const byApp = useMemo(() => {
     const m = new Map<number, { name: string; entries: AccessMappingEntry[] }>();
@@ -557,7 +566,7 @@ export default function AccessMapping() {
 
           {/* ── By User ── */}
           <TabsContent value="byUser" className="space-y-6 mt-4">
-            {isLoading ? (
+            {isLoading || isUsersLoading ? (
               <p className="text-muted-foreground text-sm">Loading…</p>
             ) : byUser.length === 0 ? (
               <p className="text-muted-foreground text-sm">
@@ -580,16 +589,22 @@ export default function AccessMapping() {
                       Add Application
                     </Button>
                   </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>App</TableHead>
-                        <TableHead>Access Level</TableHead>
-                        <TableHead className="text-right">Remove</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>{group.entries.map((e) => entryRow(e, false, true))}</TableBody>
-                  </Table>
+                   {group.entries.length === 0 ? (
+                     <p className="px-4 py-4 text-sm text-muted-foreground">
+                       No application access assigned yet.
+                     </p>
+                   ) : (
+                     <Table>
+                       <TableHeader>
+                         <TableRow>
+                           <TableHead>App</TableHead>
+                           <TableHead>Access Level</TableHead>
+                           <TableHead className="text-right">Remove</TableHead>
+                         </TableRow>
+                       </TableHeader>
+                       <TableBody>{group.entries.map((e) => entryRow(e, false, true))}</TableBody>
+                     </Table>
+                   )}
                 </div>
               ))
             )}

@@ -640,7 +640,7 @@ export const ListAuditLogResponse = zod.array(ListAuditLogResponseItem)
 
 
 /**
- * @summary List data sync errors, unique per entity and record id, newest first
+ * @summary List current data sync errors, excluding selected entities and connection errors
  */
 export const listSyncErrorsQueryLimitDefault = 100;
 
@@ -664,7 +664,7 @@ export const ListSyncErrorsResponse = zod.object({
 
 
 /**
- * @summary List entities that have sync errors, with unique error counts
+ * @summary List non-excluded entities that have current sync errors, with unique error counts
  */
 export const ListSyncEntitiesResponseItem = zod.object({
   "entitySetName": zod.string(),

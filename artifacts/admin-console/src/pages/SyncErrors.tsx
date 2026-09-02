@@ -35,7 +35,7 @@ export default function SyncErrors() {
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h1 className="text-3xl font-bold tracking-tight mb-2">Data Sync Error Log</h1>
       <p className="text-muted-foreground mb-6">
-        Errors from the D365 data sync (unique per entity and record).
+        Errors from the D365 data sync from today and yesterday (unique per entity and record).
         {data ? ` ${data.totalUnique.toLocaleString()} unique errors.` : ""}
       </p>
 
