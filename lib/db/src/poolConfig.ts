@@ -58,10 +58,14 @@ export function getDbPoolConfig(): pg.PoolConfig {
   if (azureUrl && azureUrl.trim() !== "") {
     return parseLenientPostgresUrl(azureUrl);
   }
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "Neither AZURE_DATABASE_URL nor DATABASE_URL is set. Did you forget to provision a database?",
-    );
-  }
-  return { connectionString: process.env.DATABASE_URL };
+      if (!process.env.DATABASE_URL) {
+      throw new Error(
+        "Neither AZURE_DATABASE_URL nor DATABASE_URL is set. Did you forget to provision a database?",
+      );
+    }
+
+    return {
+      connectionString: process.env.DATABASE_URL,
+      options: `-c search_path=${AZURE_SCHEMA}`,
+    };
 }
