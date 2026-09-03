@@ -55,7 +55,7 @@ ENV BASE_PATH=/
 # more than strictly required (it also builds mockup-sandbox, which this image
 # doesn't serve) but keeps the Docker build in lockstep with `pnpm run build`,
 # the same command CI/local dev already use.
-RUN pnpm run build
+RUN pnpm run build:prod
 
 # --- Runtime ---------------------------------------------------------------
 ENV NODE_ENV=production
