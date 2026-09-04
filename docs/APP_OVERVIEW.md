@@ -14,11 +14,13 @@
 > | `artifacts/api-server/src/routes/users.ts` | §6 Users |
 > | `artifacts/api-server/src/routes/accessMapping.ts` | §7 Map User Security Access |
 > | `artifacts/api-server/src/routes/appsResources.ts` | §8.1 Apps, §8.2 Resources |
+> | `artifacts/api-server/src/routes/appsResources.test.ts` | §8.1 Apps — entitlement role regression coverage |
 > | `artifacts/api-server/src/routes/roles.ts` | §8.3 Roles |
 > | `artifacts/api-server/src/routes/grants.ts` | §8.4 Access Grants |
 > | `artifacts/api-server/src/routes/security.ts` | §9 Security Policies |
 > | `artifacts/api-server/src/routes/audit.ts` | §10 Audit Log |
 > | `artifacts/api-server/src/routes/sync.ts` | §11 Data Sync Error Log |
+> | `artifacts/api-server/src/routes/sync.test.ts` | §11 Data Sync Error Log — filtering regression coverage |
 > | `artifacts/api-server/src/routes/workOrderPurge.ts` | §12 Work Order Purge |
 > | `artifacts/api-server/src/routes/apiKeys.ts` | §13 API Key Authentication |
 > | `artifacts/api-server/src/routes/permissionMatrix.ts` | §14 Permission Matrix Export |
@@ -69,7 +71,7 @@ The Admin Console is a web-based management portal backed by a REST API. It gove
 | Database ORM | Drizzle ORM (PostgreSQL) |
 | Auth | Microsoft Entra ID (Azure AD) OIDC + PKCE via `openid-client` |
 | Session store | `express-session` backed by PostgreSQL (`connect-pg-simple`) |
-| External directory | Microsoft Graph API (user search, sign-in logs) |
+| External directory | Microsoft Graph API (user search) |
 
 ---
 

@@ -93,7 +93,6 @@ vi.mock("../lib/oidc", () => ({
 
 vi.mock("../lib/graph", () => ({
   searchDirectoryUsers: vi.fn().mockResolvedValue([]),
-  getSignInLogs: vi.fn().mockResolvedValue([]),
   GraphPermissionError: class GraphPermissionError extends Error {},
 }));
 

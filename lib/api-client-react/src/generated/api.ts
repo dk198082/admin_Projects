@@ -44,14 +44,12 @@ import type {
   CreateRoleInput,
   CreatedApiKey,
   DeniedAccessSummary,
-  EntraSignIn,
   EntraUser,
   ErrorMessage,
   GetDeniedAccessSummaryParams,
   HealthStatus,
   ListAccessGrantsParams,
   ListAuditLogParams,
-  ListEntraSignInsParams,
   ListResourcesParams,
   ListSyncErrorsParams,
   Resource,
@@ -617,90 +615,6 @@ export function useSearchEntraUsers<TData = Awaited<ReturnType<typeof searchEntr
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getSearchEntraUsersQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getListEntraSignInsUrl = (params?: ListEntraSignInsParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/entra/signins?${stringifiedParams}` : `/api/entra/signins`
-}
-
-/**
- * @summary List recent Entra ID sign-in events, optionally filtered by application name
- */
-export const listEntraSignIns = async (params?: ListEntraSignInsParams, options?: RequestInit): Promise<EntraSignIn[]> => {
-
-  return customFetch<EntraSignIn[]>(getListEntraSignInsUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListEntraSignInsQueryKey = (params?: ListEntraSignInsParams,) => {
-    return [
-    `/api/entra/signins`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getListEntraSignInsQueryOptions = <TData = Awaited<ReturnType<typeof listEntraSignIns>>, TError = ErrorType<ErrorMessage>>(params?: ListEntraSignInsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEntraSignIns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListEntraSignInsQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEntraSignIns>>> = ({ signal }) => listEntraSignIns(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEntraSignIns>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListEntraSignInsQueryResult = NonNullable<Awaited<ReturnType<typeof listEntraSignIns>>>
-export type ListEntraSignInsQueryError = ErrorType<ErrorMessage>
-
-
-/**
- * @summary List recent Entra ID sign-in events, optionally filtered by application name
- */
-
-export function useListEntraSignIns<TData = Awaited<ReturnType<typeof listEntraSignIns>>, TError = ErrorType<ErrorMessage>>(
- params?: ListEntraSignInsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEntraSignIns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListEntraSignInsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

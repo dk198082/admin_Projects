@@ -91,7 +91,7 @@ done
 # files added without updating CONTRIBUTING.md or this script.
 echo ""
 echo "── New/unknown route files ──────────────────────────────────────────────"
-KNOWN_ROUTES="health.ts entra.ts index.ts auth.ts accessCheck.ts accessCheck.test.ts users.ts roles.ts appsResources.ts grants.ts security.ts audit.ts sync.ts apiKeys.ts apiKeys.test.ts apiKeys.auth-enforcement.test.ts permissionMatrix.ts accessMapping.ts workOrderPurge.ts requireAuth.integration.test.ts"
+KNOWN_ROUTES="health.ts entra.ts index.ts auth.ts accessCheck.ts accessCheck.test.ts users.ts roles.ts appsResources.ts appsResources.test.ts grants.ts security.ts audit.ts sync.ts sync.test.ts apiKeys.ts apiKeys.test.ts apiKeys.auth-enforcement.test.ts permissionMatrix.ts accessMapping.ts workOrderPurge.ts requireAuth.integration.test.ts"
 
 for f in "$ROUTES_DIR"/*.ts; do
   basename_f="$(basename "$f")"

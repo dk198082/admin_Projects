@@ -167,31 +167,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
-  /entra/signins:
-    get:
-      operationId: listEntraSignIns
-      tags: [audit]
-      summary: List recent Entra ID sign-in events, optionally filtered by application name
-      parameters:
-        - name: app
-          in: query
-          required: false
-          schema: { type: string }
-      responses:
-        "200":
-          description: Recent sign-in events
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/EntraSignIn"
-        "502":
-          description: Sign-in log lookup failed (e.g. missing Graph permission)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
   /roles:
     get:
       operationId: listRoles
@@ -1201,18 +1176,6 @@ components:
         created: { type: integer }
         skipped: { type: integer }
         assignedRoles: { type: integer }
-    EntraSignIn:
-      type: object
-      required: [id, userDisplayName, userPrincipalName, appDisplayName, createdDateTime, success]
-      properties:
-        id: { type: string }
-        userDisplayName: { type: string }
-        userPrincipalName: { type: string }
-        appDisplayName: { type: string }
-        createdDateTime: { type: string }
-        success: { type: boolean }
-        failureReason: { type: string, nullable: true }
-        ipAddress: { type: string, nullable: true }
     Role:
       type: object
       required: [id, name, description, userCount, grantCount, isEntitlement]

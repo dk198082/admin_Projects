@@ -147,26 +147,6 @@ export const SearchEntraUsersResponse = zod.array(SearchEntraUsersResponseItem)
 
 
 /**
- * @summary List recent Entra ID sign-in events, optionally filtered by application name
- */
-export const ListEntraSignInsQueryParams = zod.object({
-  "app": zod.coerce.string().optional()
-})
-
-export const ListEntraSignInsResponseItem = zod.object({
-  "id": zod.string(),
-  "userDisplayName": zod.string(),
-  "userPrincipalName": zod.string(),
-  "appDisplayName": zod.string(),
-  "createdDateTime": zod.string(),
-  "success": zod.boolean(),
-  "failureReason": zod.string().nullish(),
-  "ipAddress": zod.string().nullish()
-})
-export const ListEntraSignInsResponse = zod.array(ListEntraSignInsResponseItem)
-
-
-/**
  * @summary List all roles with user counts
  */
 export const ListRolesResponseItem = zod.object({

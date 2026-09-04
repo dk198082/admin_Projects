@@ -1,12 +1,9 @@
 import {
   useListAuditLog,
   getListAuditLogQueryKey,
-  useListEntraSignIns,
-  getListEntraSignInsQueryKey,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,17 +17,8 @@ import { useState, useMemo } from "react";
 import { X } from "lucide-react";
 import { useSearch, useLocation } from "wouter";
 
-const APP_FILTERS = ["All apps", "Field Service Calendar", "Production Shop Floor"] as const;
-
 type Category = "all" | "access" | "admin";
 type Outcome = "all" | "allowed" | "denied";
-
-function extractErrorMessage(err: unknown): string {
-  const e = err as { data?: { error?: unknown } | null; message?: string };
-  if (e?.data && typeof e.data === "object" && typeof e.data.error === "string") return e.data.error;
-  if (typeof e?.message === "string" && e.message) return e.message;
-  return "Failed to load sign-in logs";
-}
 
 function ActionBadge({ action }: { action: string }) {
   if (action === "ACCESS_DENIED") {
@@ -86,16 +74,6 @@ export default function Audit() {
     return result;
   }, [logs, urlActor, urlEntity]);
 
-  const [appFilter, setAppFilter] = useState<(typeof APP_FILTERS)[number]>("All apps");
-  const signInParams = appFilter === "All apps" ? {} : { app: appFilter };
-  const {
-    data: signIns,
-    isLoading: signInsLoading,
-    error: signInsError,
-  } = useListEntraSignIns(signInParams, {
-    query: { queryKey: getListEntraSignInsQueryKey(signInParams) },
-  });
-
   const showOutcomeFilter = category !== "admin";
 
   const hasUrlFilter = Boolean(urlActor || urlEntity || urlActionParam);
@@ -110,18 +88,11 @@ export default function Audit() {
     <div className="p-8 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h1 className="text-3xl font-bold tracking-tight mb-2">Audit Log</h1>
       <p className="text-muted-foreground mb-8">
-        Administrative actions and Microsoft Entra sign-in activity.
+        Administrative actions and application access-check activity.
       </p>
 
-      <Tabs defaultValue="activity">
-        <TabsList className="mb-4">
-          <TabsTrigger value="activity">Admin Activity</TabsTrigger>
-          <TabsTrigger value="signins">Entra Sign-ins</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="activity">
-          {/* Filter bar */}
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show:</span>
               <Select value={category} onValueChange={(v) => {
@@ -165,11 +136,11 @@ export default function Audit() {
                 Clear filters
               </Button>
             )}
-          </div>
+      </div>
 
-          {/* URL-driven actor / entity badges */}
-          {(urlActor || urlEntity) && (
-            <div className="mb-3 flex items-center gap-2 flex-wrap">
+      {/* URL-driven actor / entity badges */}
+      {(urlActor || urlEntity) && (
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground">Also filtered by:</span>
               {urlActor && (
                 <Badge variant="secondary" className="font-mono text-xs max-w-[300px] truncate">
@@ -190,11 +161,11 @@ export default function Audit() {
                 <X className="h-3 w-3" />
                 Remove
               </Button>
-            </div>
-          )}
+        </div>
+      )}
 
-          <div className="border rounded-md bg-card overflow-hidden">
-            <Table>
+      <div className="border rounded-md bg-card overflow-hidden">
+        <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead className="w-[180px]">Timestamp</TableHead>
@@ -234,83 +205,8 @@ export default function Audit() {
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="signins">
-          <div className="flex gap-2 mb-4">
-            {APP_FILTERS.map((f) => (
-              <Button
-                key={f}
-                size="sm"
-                variant={appFilter === f ? "default" : "outline"}
-                onClick={() => setAppFilter(f)}
-              >
-                {f}
-              </Button>
-            ))}
-          </div>
-          {signInsError ? (
-            <div className="border rounded-md bg-destructive/5 text-destructive text-sm p-4">
-              {extractErrorMessage(signInsError)}
-            </div>
-          ) : (
-            <div className="border rounded-md bg-card overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead className="w-[180px]">Timestamp</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Application</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>IP Address</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {signInsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading sign-in events...</TableCell>
-                    </TableRow>
-                  ) : signIns?.length ? (
-                    signIns.map((s) => (
-                      <TableRow key={s.id} className="font-mono text-xs hover:bg-muted/20">
-                        <TableCell className="text-muted-foreground">
-                          {format(new Date(s.createdDateTime), "yyyy-MM-dd HH:mm:ss")}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium text-foreground">{s.userDisplayName}</div>
-                          <div className="text-muted-foreground">{s.userPrincipalName}</div>
-                        </TableCell>
-                        <TableCell>{s.appDisplayName}</TableCell>
-                        <TableCell>
-                          {s.success ? (
-                            <Badge variant="outline" className="text-green-600 border-green-600/40">Success</Badge>
-                          ) : (
-                            <div>
-                              <Badge variant="outline" className="text-destructive border-destructive/40">Failed</Badge>
-                              {s.failureReason ? (
-                                <div className="text-muted-foreground mt-1">{s.failureReason}</div>
-                              ) : null}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{s.ipAddress ?? "—"}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No sign-in events found{appFilter !== "All apps" ? ` for ${appFilter}` : ""}.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        </Table>
+      </div>
     </div>
   );
 }

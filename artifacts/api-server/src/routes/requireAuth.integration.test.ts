@@ -88,7 +88,6 @@ vi.mock("@workspace/permission-matrix", () => ({
 // ---------------------------------------------------------------------------
 vi.mock("../lib/graph", () => ({
   searchDirectoryUsers: vi.fn().mockResolvedValue({ value: [] }),
-  getSignInLogs: vi.fn().mockResolvedValue({ value: [] }),
   GraphPermissionError: class GraphPermissionError extends Error {},
 }));
 
