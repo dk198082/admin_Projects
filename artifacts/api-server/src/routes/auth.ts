@@ -26,7 +26,7 @@ declare module "express-session" {
 }
 
 const router: IRouter = Router();
-
+const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5175";
 router.get("/auth/login", async (req, res, next) => {
   try {
     const config = await getOidcConfig();
@@ -55,7 +55,7 @@ router.get("/auth/callback", async (req, res, next) => {
     const config = await getOidcConfig();
     const { codeVerifier, oauthState } = req.session;
     if (!codeVerifier || !oauthState) {
-      res.redirect("/?auth_error=session_expired");
+      res.redirect(`${FRONTEND_URL}/?auth_error=session_expired`);
       return;
     }
 
@@ -69,7 +69,8 @@ router.get("/auth/callback", async (req, res, next) => {
 
     const claims = tokens.claims();
     if (!claims?.sub) {
-      res.redirect("/?auth_error=no_claims");
+      // res.redirect("/?auth_error=no_claims");
+      res.redirect(`${FRONTEND_URL}/?auth_error=no_claims`);
       return;
     }
 
@@ -108,7 +109,8 @@ router.get("/auth/callback", async (req, res, next) => {
         `${name} (${email}) denied Admin Console login — no entitlement assigned`,
         name,
       );
-      res.redirect("/?auth_error=not_authorized");
+      // res.redirect("/?auth_error=not_authorized");
+      res.redirect(`${FRONTEND_URL}/?auth_error=not_authorized`);
       return;
     }
 
@@ -133,10 +135,12 @@ router.get("/auth/callback", async (req, res, next) => {
     };
 
     await logAudit("login", "Session", `${name} (${email}) signed in via Entra ID`, name);
-    res.redirect("/");
+    // res.redirect("/");
+    res.redirect(FRONTEND_URL);
   } catch (err) {
     req.log.error({ err }, "Entra ID callback failed");
-    res.redirect("/?auth_error=callback_failed");
+    // res.redirect("/?auth_error=callback_failed");
+    res.redirect(`${FRONTEND_URL}/?auth_error=callback_failed`);
   }
 });
 
@@ -164,7 +168,8 @@ router.post("/auth/logout", async (req, res) => {
 
 router.get("/auth/logout", (req, res) => {
   req.session.destroy(() => {
-    res.redirect("/");
+    // res.redirect("/");
+    res.redirect(FRONTEND_URL);
   });
 });
 
