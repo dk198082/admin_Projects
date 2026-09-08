@@ -1,81 +1,195 @@
 # syntax=docker/dockerfile:1
+
+# -----------------------------------------------------------------------------
+# TOCRM Digital Workspace
 #
-# Builds ONE container that runs the Express API (artifacts/api-server) and
-# serves BOTH frontends as static files:
-#   artifacts/workspace-shell  -> site root "/"     (the Digital Workspace launcher)
-#   artifacts/admin-console    -> "/admin-console/"  (one of the launchable tiles)
-# so the whole workspace deploys as a single Azure App Service (Web App for
-# Containers) or Azure Container Apps instance.
+# ONE container runs:
 #
-# See AZURE_DEPLOYMENT.md and docs/workspace/TECHNICAL_DESIGN.md for the
-# required Azure resources and environment variables (AZURE_DATABASE_URL,
-# SESSION_SECRET, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET,
-# etc.) — none of those are baked into the image; they're supplied at deploy
-# time as App Settings / Container Apps secrets.
+#   Express API
+#       artifacts/api-server
 #
-# This is a single-stage build (not multi-stage). pnpm workspaces hoist
-# dependencies via symlinks into a content-addressable store, which is fragile
-# to split across build/runtime stages with a plain `COPY`. Building and
-# running from the same image is a bit larger but reliable; shrink it later
-# with a multi-stage `pnpm deploy` step if image size becomes a problem.
+#   Digital Workspace
+#       artifacts/workspace-shell
+#       served at /
+#
+#   Admin Console
+#       artifacts/admin-console
+#       served at /admin-console/
+#
+# This container is intended for:
+#
+#   - Azure App Service for Containers
+#   - Azure Container Apps
+#   - Local Docker testing
+#
+# Runtime configuration is supplied through environment variables / Azure
+# App Settings. Secrets are NOT baked into the image.
+# -----------------------------------------------------------------------------
 
 FROM node:24-bookworm-slim
 
 WORKDIR /repo
 
+# -----------------------------------------------------------------------------
+# Package manager
+# -----------------------------------------------------------------------------
+
 RUN corepack enable
 
-# Copy just the manifests first so `pnpm install` is cached across builds that
-# only change application source.
+# -----------------------------------------------------------------------------
+# Copy package manifests first.
+#
+# This allows Docker to cache pnpm install when application source code changes
+# but package manifests / lockfile have not changed.
+# -----------------------------------------------------------------------------
+
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY artifacts/api-server/package.json artifacts/api-server/package.json
-COPY artifacts/admin-console/package.json artifacts/admin-console/package.json
-COPY artifacts/workspace-shell/package.json artifacts/workspace-shell/package.json
-COPY artifacts/mockup-sandbox/package.json artifacts/mockup-sandbox/package.json
-COPY lib/api-client-react/package.json lib/api-client-react/package.json
-COPY lib/api-spec/package.json lib/api-spec/package.json
-COPY lib/api-zod/package.json lib/api-zod/package.json
-COPY lib/db/package.json lib/db/package.json
-COPY lib/permission-matrix/package.json lib/permission-matrix/package.json
-COPY scripts/package.json scripts/package.json
+
+COPY artifacts/api-server/package.json \
+     artifacts/api-server/package.json
+
+COPY artifacts/admin-console/package.json \
+     artifacts/admin-console/package.json
+
+COPY artifacts/workspace-shell/package.json \
+     artifacts/workspace-shell/package.json
+
+COPY artifacts/mockup-sandbox/package.json \
+     artifacts/mockup-sandbox/package.json
+
+COPY lib/api-client-react/package.json \
+     lib/api-client-react/package.json
+
+COPY lib/api-spec/package.json \
+     lib/api-spec/package.json
+
+COPY lib/api-zod/package.json \
+     lib/api-zod/package.json
+
+COPY lib/db/package.json \
+     lib/db/package.json
+
+COPY lib/permission-matrix/package.json \
+     lib/permission-matrix/package.json
+
+COPY scripts/package.json \
+     scripts/package.json
+
+# -----------------------------------------------------------------------------
+# Install dependencies
+# -----------------------------------------------------------------------------
 
 RUN pnpm install --frozen-lockfile
 
-# Now copy the rest of the source and build everything.
+# -----------------------------------------------------------------------------
+# Copy application source
+# -----------------------------------------------------------------------------
+
 COPY . .
 
-# vite.config.ts (every frontend artifact) requires PORT and BASE_PATH to even
-# *load* the config, for both `dev` and `build`. PORT is a dummy value here —
-# only read at build time, doesn't affect the runtime container. BASE_PATH is
-# real: it must match the mount path each frontend is served at (see the
-# STATIC_ROOT_DIR block in artifacts/api-server/src/app.ts) or its asset URLs
-# would resolve to the wrong path and 404.
+# -----------------------------------------------------------------------------
+# Build-time Vite configuration
+#
+# Vite configs require PORT and BASE_PATH.
+#
+# PORT:
+#   Only required so the Vite configuration can load during Docker build.
+#
+# BASE_PATH:
+#   Must match the URL path where the frontend will be served.
+# -----------------------------------------------------------------------------
+
 ENV PORT=4173
 
-RUN BASE_PATH=/                  pnpm --filter @workspace/workspace-shell run build \
- && BASE_PATH=/admin-console/     pnpm --filter @workspace/admin-console run build
+# -----------------------------------------------------------------------------
+# Build Digital Workspace
+#
+# Served at:
+#   /
+# -----------------------------------------------------------------------------
 
-# Typechecks + builds the API server (mockup-sandbox is deliberately skipped —
-# not served by this image).
+RUN BASE_PATH=/ \
+    pnpm --filter @workspace/workspace-shell run build
+
+# -----------------------------------------------------------------------------
+# Build Admin Console
+#
+# Served at:
+#   /admin-console/
+# -----------------------------------------------------------------------------
+
+RUN BASE_PATH=/admin-console/ \
+    pnpm --filter @workspace/admin-console run build
+
+# -----------------------------------------------------------------------------
+# Build shared libraries
+# -----------------------------------------------------------------------------
+
 RUN pnpm run typecheck:libs
+
+# -----------------------------------------------------------------------------
+# Build Express API server
+# -----------------------------------------------------------------------------
+
 RUN pnpm --filter @workspace/api-server run build
 
-# Arrange both builds under one directory, matching what STATIC_ROOT_DIR
-# expects: <root>/<app-name>/index.html
-RUN mkdir -p /repo/static-root \
- && cp -r artifacts/workspace-shell/dist/public  /repo/static-root/workspace-shell \
- && cp -r artifacts/admin-console/dist/public    /repo/static-root/admin-console
+# -----------------------------------------------------------------------------
+# Create static root
+#
+# API server STATIC_ROOT_DIR expects:
+#
+#   /repo/static-root/
+#       workspace-shell/
+#           index.html
+#
+#       admin-console/
+#           index.html
+# -----------------------------------------------------------------------------
 
-# --- Runtime ---------------------------------------------------------------
+RUN mkdir -p /repo/static-root \
+    && cp -r artifacts/workspace-shell/dist/public \
+       /repo/static-root/workspace-shell \
+    && cp -r artifacts/admin-console/dist/public \
+       /repo/static-root/admin-console
+
+# -----------------------------------------------------------------------------
+# Runtime configuration
+# -----------------------------------------------------------------------------
+
 ENV NODE_ENV=production
-# Azure App Service for Containers / Container Apps inject PORT themselves
-# (App Service defaults to 8080 for custom containers); this is just the
-# in-container default so `docker run -p 8080:8080` works out of the box.
+
+# Azure App Service / Container Apps normally supplies PORT.
+# 8080 is the local/default container port.
 ENV PORT=8080
+
+# Express uses this directory to serve the two frontend applications.
 ENV STATIC_ROOT_DIR=/repo/static-root
+
+# -----------------------------------------------------------------------------
+# Container port
+# -----------------------------------------------------------------------------
 
 EXPOSE 8080
 
-# Azure App Service / Container Apps health probes can point at GET /api/healthz.
+# -----------------------------------------------------------------------------
+# Runtime working directory
+# -----------------------------------------------------------------------------
+
 WORKDIR /repo/artifacts/api-server
+
+# -----------------------------------------------------------------------------
+# Start Express API
+#
+# Express serves:
+#
+#   /
+#       Digital Workspace
+#
+#   /admin-console/
+#       Admin Console
+#
+#   /api/*
+#       Backend API
+# -----------------------------------------------------------------------------
+
 CMD ["node", "--enable-source-maps", "./dist/index.mjs"]
