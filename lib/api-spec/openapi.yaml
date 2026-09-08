@@ -167,6 +167,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /entra/signins:
+    get:
+      operationId: listEntraSignIns
+      tags: [audit]
+      summary: List recent Entra ID sign-in events, optionally filtered by application name
+      parameters:
+        - name: app
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Recent sign-in events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntraSignIn"
+        "502":
+          description: Sign-in log lookup failed (e.g. missing Graph permission)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /roles:
     get:
       operationId: listRoles
@@ -432,6 +457,67 @@ paths:
           description: Deleted
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /apps/{id}/launch:
+    patch:
+      operationId: updateAppLaunch
+      tags: [apps]
+      summary: >-
+        Set an application's Workspace Shell tile metadata (launch URL, icon,
+        description, category). An app with no launchUrl set is never shown
+        as a tile, regardless of who has roles for it — see
+        docs/workspace/ADDING_NEW_APPS.md.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppLaunchInput"
+      responses:
+        "200":
+          description: Updated app
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /my-apps:
+    get:
+      operationId: getMyApps
+      tags: [workspace]
+      summary: >-
+        Applications the signed-in user is entitled to launch from the
+        Workspace Shell (has at least one role assignment for, and which has
+        a launchUrl configured). Presentation-only — each application still
+        enforces its own access-check independently.
+      responses:
+        "200":
+          description: The signed-in user's launchable apps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyAppsResponse"
+        "401":
+          description: Not signed in
           content:
             application/json:
               schema:
@@ -1176,6 +1262,18 @@ components:
         created: { type: integer }
         skipped: { type: integer }
         assignedRoles: { type: integer }
+    EntraSignIn:
+      type: object
+      required: [id, userDisplayName, userPrincipalName, appDisplayName, createdDateTime, success]
+      properties:
+        id: { type: string }
+        userDisplayName: { type: string }
+        userPrincipalName: { type: string }
+        appDisplayName: { type: string }
+        createdDateTime: { type: string }
+        success: { type: boolean }
+        failureReason: { type: string, nullable: true }
+        ipAddress: { type: string, nullable: true }
     Role:
       type: object
       required: [id, name, description, userCount, grantCount, isEntitlement]
@@ -1285,6 +1383,35 @@ components:
         id: { type: integer }
         name: { type: string }
         resourceCount: { type: integer }
+        launchUrl: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        icon: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+    AppLaunchInput:
+      type: object
+      properties:
+        launchUrl: { type: string, format: uri, nullable: true }
+        description: { type: string, maxLength: 500, nullable: true }
+        icon: { type: string, maxLength: 100, nullable: true }
+        category: { type: string, maxLength: 100, nullable: true }
+    MyApp:
+      type: object
+      required: [id, name, description, icon, category, launchUrl]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        icon: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        launchUrl: { type: string }
+    MyAppsResponse:
+      type: object
+      required: [userName, apps]
+      properties:
+        userName: { type: string }
+        apps:
+          type: array
+          items: { $ref: "#/components/schemas/MyApp" }
     AppInput:
       type: object
       required: [name]

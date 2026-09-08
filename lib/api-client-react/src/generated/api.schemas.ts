@@ -222,6 +222,17 @@ export interface BulkImportUsersResult {
   assignedRoles: number;
 }
 
+export interface EntraSignIn {
+  id: string;
+  userDisplayName: string;
+  userPrincipalName: string;
+  appDisplayName: string;
+  createdDateTime: string;
+  success: boolean;
+  failureReason?: string | null;
+  ipAddress?: string | null;
+}
+
 export interface Role {
   id: number;
   name: string;
@@ -322,6 +333,34 @@ export interface App {
   id: number;
   name: string;
   resourceCount: number;
+  launchUrl?: string | null;
+  description?: string | null;
+  icon?: string | null;
+  category?: string | null;
+}
+
+export interface AppLaunchInput {
+  launchUrl?: string | null;
+  /** @maxLength 500 */
+  description?: string | null;
+  /** @maxLength 100 */
+  icon?: string | null;
+  /** @maxLength 100 */
+  category?: string | null;
+}
+
+export interface MyApp {
+  id: number;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  category: string | null;
+  launchUrl: string;
+}
+
+export interface MyAppsResponse {
+  userName: string;
+  apps: MyApp[];
 }
 
 export interface AppInput {
@@ -468,6 +507,10 @@ export type SearchEntraUsersParams = {
  * @minLength 2
  */
 query: string;
+};
+
+export type ListEntraSignInsParams = {
+app?: string;
 };
 
 export type ListResourcesParams = {

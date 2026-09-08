@@ -6,12 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface App {
+export interface MyApp {
   id: number;
   name: string;
-  resourceCount: number;
-  launchUrl?: string | null;
-  description?: string | null;
-  icon?: string | null;
-  category?: string | null;
+  description: string | null;
+  icon: string | null;
+  category: string | null;
+  launchUrl: string;
 }

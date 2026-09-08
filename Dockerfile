@@ -1,15 +1,17 @@
 # syntax=docker/dockerfile:1
 #
 # Builds ONE container that runs the Express API (artifacts/api-server) and
-# also serves the built frontend (artifacts/admin-console) as static files,
-# so the whole app deploys as a single Azure App Service (Web App for
+# serves BOTH frontends as static files:
+#   artifacts/workspace-shell  -> site root "/"     (the Digital Workspace launcher)
+#   artifacts/admin-console    -> "/admin-console/"  (one of the launchable tiles)
+# so the whole workspace deploys as a single Azure App Service (Web App for
 # Containers) or Azure Container Apps instance.
 #
-# See AZURE_DEPLOYMENT.md for the required Azure resources and environment
-# variables (AZURE_DATABASE_URL, SESSION_SECRET, AZURE_TENANT_ID,
-# AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, etc.) — none of those are baked into
-# the image; they're supplied at deploy time as App Settings / Container Apps
-# secrets.
+# See AZURE_DEPLOYMENT.md and docs/workspace/TECHNICAL_DESIGN.md for the
+# required Azure resources and environment variables (AZURE_DATABASE_URL,
+# SESSION_SECRET, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET,
+# etc.) — none of those are baked into the image; they're supplied at deploy
+# time as App Settings / Container Apps secrets.
 #
 # This is a single-stage build (not multi-stage). pnpm workspaces hoist
 # dependencies via symlinks into a content-addressable store, which is fragile
@@ -28,6 +30,7 @@ RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY artifacts/api-server/package.json artifacts/api-server/package.json
 COPY artifacts/admin-console/package.json artifacts/admin-console/package.json
+COPY artifacts/workspace-shell/package.json artifacts/workspace-shell/package.json
 COPY artifacts/mockup-sandbox/package.json artifacts/mockup-sandbox/package.json
 COPY lib/api-client-react/package.json lib/api-client-react/package.json
 COPY lib/api-spec/package.json lib/api-spec/package.json
@@ -41,21 +44,27 @@ RUN pnpm install --frozen-lockfile
 # Now copy the rest of the source and build everything.
 COPY . .
 
-# vite.config.ts (both frontend artifacts) requires PORT and BASE_PATH to even
-# *load* the config, for both `dev` and `build`. These two values are only
-# read at build time to bake the app's base URL into the built assets — they
-# do NOT affect the running container (that's controlled by PORT below and the
-# STATIC_DIR the Express server serves from). BASE_PATH=/ because the API
-# server serves the SPA from the site root.
+# vite.config.ts (every frontend artifact) requires PORT and BASE_PATH to even
+# *load* the config, for both `dev` and `build`. PORT is a dummy value here —
+# only read at build time, doesn't affect the runtime container. BASE_PATH is
+# real: it must match the mount path each frontend is served at (see the
+# STATIC_ROOT_DIR block in artifacts/api-server/src/app.ts) or its asset URLs
+# would resolve to the wrong path and 404.
 ENV PORT=4173
-ENV BASE_PATH=/
 
-# Typechecks + builds every workspace package (api-server's esbuild bundle,
-# every Vite frontend, etc.) — see root package.json "build" script. Slightly
-# more than strictly required (it also builds mockup-sandbox, which this image
-# doesn't serve) but keeps the Docker build in lockstep with `pnpm run build`,
-# the same command CI/local dev already use.
-RUN pnpm run build:prod
+RUN BASE_PATH=/                  pnpm --filter @workspace/workspace-shell run build \
+ && BASE_PATH=/admin-console/     pnpm --filter @workspace/admin-console run build
+
+# Typechecks + builds the API server (mockup-sandbox is deliberately skipped —
+# not served by this image).
+RUN pnpm run typecheck:libs
+RUN pnpm --filter @workspace/api-server run build
+
+# Arrange both builds under one directory, matching what STATIC_ROOT_DIR
+# expects: <root>/<app-name>/index.html
+RUN mkdir -p /repo/static-root \
+ && cp -r artifacts/workspace-shell/dist/public  /repo/static-root/workspace-shell \
+ && cp -r artifacts/admin-console/dist/public    /repo/static-root/admin-console
 
 # --- Runtime ---------------------------------------------------------------
 ENV NODE_ENV=production
@@ -63,9 +72,7 @@ ENV NODE_ENV=production
 # (App Service defaults to 8080 for custom containers); this is just the
 # in-container default so `docker run -p 8080:8080` works out of the box.
 ENV PORT=8080
-# Tell the API server where the built SPA lives so it serves it itself
-# (see the STATIC_DIR block in artifacts/api-server/src/app.ts).
-ENV STATIC_DIR=/repo/artifacts/admin-console/dist/public
+ENV STATIC_ROOT_DIR=/repo/static-root
 
 EXPOSE 8080
 

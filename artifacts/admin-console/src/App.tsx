@@ -28,7 +28,7 @@ export function useAuthUser() {
   return useQuery<AuthUser | null>({
     queryKey: ["auth", "me"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/auth/me`, {
+      const res = await fetch(`/api/auth/me`, {
         credentials: "include",
       });
       if (res.status === 401) return null;

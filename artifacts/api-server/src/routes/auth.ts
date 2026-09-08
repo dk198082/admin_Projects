@@ -31,11 +31,19 @@ router.get("/auth/login", async (req, res, next) => {
   try {
     const config = await getOidcConfig();
     const codeVerifier = oidcClient.randomPKCECodeVerifier();
-    const codeChallenge = await oidcClient.calculatePKCECodeChallenge(codeVerifier);
+    const codeChallenge =
+      await oidcClient.calculatePKCECodeChallenge(codeVerifier);
     const state = oidcClient.randomState();
 
     req.session.codeVerifier = codeVerifier;
     req.session.oauthState = state;
+
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
 
     const url = oidcClient.buildAuthorizationUrl(config, {
       redirect_uri: getRedirectUri(req),
@@ -44,17 +52,41 @@ router.get("/auth/login", async (req, res, next) => {
       code_challenge_method: "S256",
       state,
     });
+
     res.redirect(url.href);
   } catch (err) {
     next(err);
   }
+  // try {
+  //   const config = await getOidcConfig();
+  //   const codeVerifier = oidcClient.randomPKCECodeVerifier();
+  //   const codeChallenge = await oidcClient.calculatePKCECodeChallenge(codeVerifier);
+  //   const state = oidcClient.randomState();
+
+  //   req.session.codeVerifier = codeVerifier;
+  //   req.session.oauthState = state;
+
+  //   const url = oidcClient.buildAuthorizationUrl(config, {
+  //     redirect_uri: getRedirectUri(req),
+  //     scope: "openid profile email",
+  //     code_challenge: codeChallenge,
+  //     code_challenge_method: "S256",
+  //     state,
+  //   });
+  //   res.redirect(url.href);
+  // } catch (err) {
+  //   next(err);
+  // }
+
 });
+
 
 router.get("/auth/callback", async (req, res, next) => {
   try {
     const config = await getOidcConfig();
     const { codeVerifier, oauthState } = req.session;
     if (!codeVerifier || !oauthState) {
+      // res.redirect("/?auth_error=session_expired");
       res.redirect(`${FRONTEND_URL}/?auth_error=session_expired`);
       return;
     }
@@ -69,8 +101,7 @@ router.get("/auth/callback", async (req, res, next) => {
 
     const claims = tokens.claims();
     if (!claims?.sub) {
-      // res.redirect("/?auth_error=no_claims");
-      res.redirect(`${FRONTEND_URL}/?auth_error=no_claims`);
+       res.redirect(`${FRONTEND_URL}/?auth_error=no_claims`);
       return;
     }
 
@@ -109,8 +140,8 @@ router.get("/auth/callback", async (req, res, next) => {
         `${name} (${email}) denied Admin Console login — no entitlement assigned`,
         name,
       );
-      // res.redirect("/?auth_error=not_authorized");
       res.redirect(`${FRONTEND_URL}/?auth_error=not_authorized`);
+      // res.redirect("/?auth_error=not_authorized");
       return;
     }
 
@@ -134,9 +165,16 @@ router.get("/auth/callback", async (req, res, next) => {
       name: appUser.name,
     };
 
+    
+    await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      }); });
+      
     await logAudit("login", "Session", `${name} (${email}) signed in via Entra ID`, name);
-    // res.redirect("/");
     res.redirect(FRONTEND_URL);
+    
   } catch (err) {
     req.log.error({ err }, "Entra ID callback failed");
     // res.redirect("/?auth_error=callback_failed");
@@ -168,8 +206,7 @@ router.post("/auth/logout", async (req, res) => {
 
 router.get("/auth/logout", (req, res) => {
   req.session.destroy(() => {
-    // res.redirect("/");
-    res.redirect(FRONTEND_URL);
+     res.redirect(FRONTEND_URL);
   });
 });
 

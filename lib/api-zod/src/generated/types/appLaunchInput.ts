@@ -6,12 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface App {
-  id: number;
-  name: string;
-  resourceCount: number;
+export interface AppLaunchInput {
   launchUrl?: string | null;
+  /** @maxLength 500 */
   description?: string | null;
+  /** @maxLength 100 */
   icon?: string | null;
+  /** @maxLength 100 */
   category?: string | null;
 }

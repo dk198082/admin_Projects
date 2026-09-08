@@ -16,6 +16,9 @@ import {
   UpdateAppParams,
   UpdateAppBody,
   UpdateAppResponse,
+  UpdateAppLaunchParams,
+  UpdateAppLaunchBody,
+  UpdateAppLaunchResponse,
   DeleteAppParams,
   CreateResourceBody,
   CreateResourceResponse,
@@ -128,6 +131,40 @@ router.patch("/apps/:id", async (req, res): Promise<void> => {
     await logAudit("update", "App", `Renamed app ${app.name} to ${name}`, req.session.user?.name);
   }
   res.json(UpdateAppResponse.parse({ ...updated, resourceCount: count }));
+});
+
+router.patch("/apps/:id/launch", async (req, res): Promise<void> => {
+  const params = UpdateAppLaunchParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const parsed = UpdateAppLaunchBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [app] = await db.select().from(appsTable).where(eq(appsTable.id, params.data.id));
+  if (!app) {
+    res.status(404).json({ error: "App not found" });
+    return;
+  }
+  const [updated] = await db
+    .update(appsTable)
+    .set(parsed.data)
+    .where(eq(appsTable.id, app.id))
+    .returning();
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(resourcesTable)
+    .where(eq(resourcesTable.appId, app.id));
+  await logAudit(
+    "update",
+    "App",
+    `Updated Workspace Shell tile settings for ${app.name}`,
+    req.session.user?.name,
+  );
+  res.json(UpdateAppLaunchResponse.parse({ ...updated, resourceCount: count }));
 });
 
 router.delete("/apps/:id", async (req, res): Promise<void> => {

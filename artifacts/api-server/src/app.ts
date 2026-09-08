@@ -68,6 +68,7 @@ export async function ensureSessionTable(): Promise<void> {
 
 app.use(
   session({
+    name: "workspace.sid",  // add for same logiin session 
     store: new PgSession({
       pool: sessionPool,
       tableName: "session",
@@ -80,7 +81,7 @@ app.use(
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-       // maxAge: 8 * 60 * 60 * 1000,
+      // maxAge: 8 * 60 * 60 * 1000,
       maxAge: 1 * 60 * 60 * 1000,  // one hour
     },
   }),
@@ -89,30 +90,49 @@ app.use(
 app.use("/api", router);
 
 // --- AZURE DEPLOYMENT ---------------------------------------------------
-// Optional single-service mode: if STATIC_DIR points at the built frontend
-// (artifacts/admin-console/dist/public), this API server also serves it, so
-// the whole app runs as ONE Azure App Service / Container Apps instance on
-// ONE origin. That keeps the session cookie same-site/same-origin and avoids
-// needing a second Azure resource (the existing `cors({ origin: true,
-// credentials: true })` above already reflects any origin, but same-origin
-// deployment means the browser never issues a cross-origin request at all).
-// Unset in local dev (the Vite dev server serves the frontend on its own
-// port instead) and set by ./Dockerfile / AZURE_DEPLOYMENT.md in production.
-const staticDir = process.env.STATIC_DIR;
-if (staticDir) {
-  const resolvedStaticDir = path.resolve(staticDir);
-  if (!fs.existsSync(path.join(resolvedStaticDir, "index.html"))) {
+// Optional single-service mode: if STATIC_ROOT_DIR is set, this API server
+// serves BOTH frontends itself, so the whole workspace runs as ONE Azure App
+// Service / Container Apps instance on ONE origin:
+//   workspace-shell   -> site root "/"        (the digital workspace launcher)
+//   admin-console     -> "/admin-console/"    (one of the launchable tiles)
+// Same-origin deployment keeps the session cookie same-site and means the
+// existing `cors({ origin: true, credentials: true })` above never actually
+// needs to allow a cross-origin request in the first place. Unset in local
+// dev (each Vite dev server serves its own app on its own port instead).
+const staticRootDir = process.env.STATIC_ROOT_DIR;
+if (staticRootDir) {
+  const resolvedRoot = path.resolve(staticRootDir);
+
+  // Mount admin-console's subpath FIRST so it's matched before
+  // workspace-shell's root catch-all (workspace-shell owns "/" and would
+  // otherwise shadow this path, since Express matches middleware in
+  // registration order).
+  const adminConsoleDir = path.join(resolvedRoot, "admin-console");
+  const adminConsoleIndex = path.join(adminConsoleDir, "index.html");
+  if (!fs.existsSync(adminConsoleIndex)) {
     throw new Error(
-      `STATIC_DIR is set to "${resolvedStaticDir}" but no index.html was found there. ` +
-        "Build the frontend first (see AZURE_DEPLOYMENT.md).",
+      `STATIC_ROOT_DIR is set to "${resolvedRoot}" but "admin-console/index.html" was not found there. ` +
+        "Build both frontends first (see AZURE_DEPLOYMENT.md).",
     );
   }
-  app.use(express.static(resolvedStaticDir));
-  // SPA fallback: any non-API, non-file GET request returns index.html so
-  // client-side routing can handle the path. Registered after "/api" so API
-  // routes/404s above are never shadowed by this.
+  app.use("/admin-console", express.static(adminConsoleDir));
+  app.get(/^\/admin-console(\/.*)?$/, (_req, res) => {
+    res.sendFile(adminConsoleIndex);
+  });
+
+  // workspace-shell owns the site root and is the catch-all SPA fallback for
+  // anything not matched above and not under /api.
+  const shellDir = path.join(resolvedRoot, "workspace-shell");
+  const shellIndex = path.join(shellDir, "index.html");
+  if (!fs.existsSync(shellIndex)) {
+    throw new Error(
+      `STATIC_ROOT_DIR is set to "${resolvedRoot}" but "workspace-shell/index.html" was not found there. ` +
+        "Build both frontends first (see AZURE_DEPLOYMENT.md).",
+    );
+  }
+  app.use(express.static(shellDir));
   app.get(/^(?!\/api\/).*/, (_req, res) => {
-    res.sendFile(path.join(resolvedStaticDir, "index.html"));
+    res.sendFile(shellIndex);
   });
 }
 

@@ -9,7 +9,7 @@ const features = [
 ];
 
 function signIn() {
-  const url = `${import.meta.env.BASE_URL}api/auth/login`;
+  const url = `/api/auth/login`;
   const target = window.top ?? window;
   try {
     target.location.href = url;

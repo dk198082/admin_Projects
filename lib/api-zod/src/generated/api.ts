@@ -147,6 +147,26 @@ export const SearchEntraUsersResponse = zod.array(SearchEntraUsersResponseItem)
 
 
 /**
+ * @summary List recent Entra ID sign-in events, optionally filtered by application name
+ */
+export const ListEntraSignInsQueryParams = zod.object({
+  "app": zod.coerce.string().optional()
+})
+
+export const ListEntraSignInsResponseItem = zod.object({
+  "id": zod.string(),
+  "userDisplayName": zod.string(),
+  "userPrincipalName": zod.string(),
+  "appDisplayName": zod.string(),
+  "createdDateTime": zod.string(),
+  "success": zod.boolean(),
+  "failureReason": zod.string().nullish(),
+  "ipAddress": zod.string().nullish()
+})
+export const ListEntraSignInsResponse = zod.array(ListEntraSignInsResponseItem)
+
+
+/**
  * @summary List all roles with user counts
  */
 export const ListRolesResponseItem = zod.object({
@@ -304,7 +324,11 @@ export const RemoveAccessMappingResponse = zod.object({
 export const ListAppsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "resourceCount": zod.number()
+  "resourceCount": zod.number(),
+  "launchUrl": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "icon": zod.string().nullish(),
+  "category": zod.string().nullish()
 })
 export const ListAppsResponse = zod.array(ListAppsResponseItem)
 
@@ -323,7 +347,11 @@ export const CreateAppBody = zod.object({
 export const CreateAppResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "resourceCount": zod.number()
+  "resourceCount": zod.number(),
+  "launchUrl": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "icon": zod.string().nullish(),
+  "category": zod.string().nullish()
 })
 
 
@@ -345,7 +373,11 @@ export const UpdateAppBody = zod.object({
 export const UpdateAppResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "resourceCount": zod.number()
+  "resourceCount": zod.number(),
+  "launchUrl": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "icon": zod.string().nullish(),
+  "category": zod.string().nullish()
 })
 
 
@@ -357,6 +389,55 @@ export const DeleteAppParams = zod.object({
 })
 
 export const DeleteAppResponse = zod.void()
+
+
+/**
+ * @summary Set an application's Workspace Shell tile metadata (launch URL, icon, description, category). An app with no launchUrl set is never shown as a tile, regardless of who has roles for it — see docs/workspace/ADDING_NEW_APPS.md.
+ */
+export const UpdateAppLaunchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateAppLaunchBodyDescriptionMax = 500;
+
+export const updateAppLaunchBodyIconMax = 100;
+
+export const updateAppLaunchBodyCategoryMax = 100;
+
+
+
+export const UpdateAppLaunchBody = zod.object({
+  "launchUrl": zod.string().url().nullish(),
+  "description": zod.string().max(updateAppLaunchBodyDescriptionMax).nullish(),
+  "icon": zod.string().max(updateAppLaunchBodyIconMax).nullish(),
+  "category": zod.string().max(updateAppLaunchBodyCategoryMax).nullish()
+})
+
+export const UpdateAppLaunchResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "resourceCount": zod.number(),
+  "launchUrl": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "icon": zod.string().nullish(),
+  "category": zod.string().nullish()
+})
+
+
+/**
+ * @summary Applications the signed-in user is entitled to launch from the Workspace Shell (has at least one role assignment for, and which has a launchUrl configured). Presentation-only — each application still enforces its own access-check independently.
+ */
+export const GetMyAppsResponse = zod.object({
+  "userName": zod.string(),
+  "apps": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "icon": zod.string().nullable(),
+  "category": zod.string().nullable(),
+  "launchUrl": zod.string()
+}))
+})
 
 
 /**

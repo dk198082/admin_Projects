@@ -1,10 +1,30 @@
 # Deploying to Azure
 
+## 🆕 This app is now also the Digital Workspace Shell
+
+This repo now serves **two frontends** from one container: the new
+`artifacts/workspace-shell` (an entitlement-aware app launcher, at the site
+root `/`) and this app's own `artifacts/admin-console` (now served at
+`/admin-console/` — one of the launchable tiles, no longer the site root).
+`STATIC_DIR` was replaced with `STATIC_ROOT_DIR` to serve both — see the
+updated §"Build & push" below.
+
+**Read `docs/workspace/FUNCTIONAL_REQUIREMENTS.md` and
+`docs/workspace/TECHNICAL_DESIGN.md` first** — they cover the full Digital
+Workspace project this change is part of: single sign-on design (how
+clicking a tile avoids a second login — nothing to configure, it's a
+consequence of every app already using Entra ID, explained in
+`TECHNICAL_DESIGN.md` §3), the new `/api/my-apps` entitlement endpoint, and
+the complete Azure deployment/Entra App Registration steps. Adding a future
+app to the workspace is documented separately in
+`docs/workspace/ADDING_NEW_APPS.md` — it requires no changes to this repo at
+all.
+
 This app already targets Azure in its architecture: Entra ID login via
 `openid-client` (dynamic PKCE + state, redirect URI derived from request
 headers — no hardcoded domain), and the database defaults to Azure PostgreSQL
 (`AZURE_DATABASE_URL`, schema `admin_console`). The changes in this repo
-(`Dockerfile`, `.dockerignore`, and the `STATIC_DIR` block in
+(`Dockerfile`, `.dockerignore`, and the `STATIC_ROOT_DIR` block in
 `artifacts/api-server/src/app.ts`) make it deployable as a normal container —
 no auth or DB code changes were needed.
 
@@ -92,16 +112,22 @@ bash scripts/smoke-test-public-api.sh https://<your-app>.azurewebsites.net/api
 
 ## Recommended shape: one container, one Azure resource
 
-`Dockerfile` at the repo root builds the API server **and** the
-`admin-console` frontend, and the API server serves the built frontend itself
-(`STATIC_DIR` env var — see `app.ts`). That means:
+`Dockerfile` at the repo root builds the API server **and both frontends**
+(`workspace-shell` at `/`, `admin-console` at `/admin-console/`), and the API
+server serves both itself (`STATIC_ROOT_DIR` env var — see `app.ts`, and
+`docs/workspace/TECHNICAL_DESIGN.md` §7 for exactly how the two are mounted
+without one shadowing the other). That means:
 
-- One Azure resource to run (Web App for Containers **or** Container Apps).
+- One Azure resource to run (Web App for Containers **or** Container Apps)
+  for the whole Digital Workspace entry point + Admin Console.
 - The existing `cors({ origin: true, credentials: true })` in `app.ts`
   reflects any origin already, so nothing to configure there — same-origin
   deployment just means the browser never makes a cross-origin request in the
   first place.
 - The session cookie stays `sameSite: "lax"` with no changes needed.
+- Field Service Calendar and Production Calendar remain their own, separate
+  Azure resources — see `docs/workspace/TECHNICAL_DESIGN.md` §8.1 for the
+  full resource topology.
 
 ## 1. Azure resources to create
 
@@ -135,7 +161,7 @@ explicitly.
 | `AZURE_CLIENT_ID` | Yes | From the Azure App Registration |
 | `AZURE_CLIENT_SECRET` | Yes | From the Azure App Registration ("Certificates & secrets") |
 | `PORT` | No | Azure sets this for you; the `Dockerfile` defaults it to `8080` |
-| `STATIC_DIR` | No | Already set by the `Dockerfile`; only change if you rearrange the image |
+| `STATIC_ROOT_DIR` | No | Already set by the `Dockerfile`; only change if you rearrange the image |
 
 Nothing else is required — unlike a from-scratch setup, this app derives its
 OAuth redirect URI at request time (`getRedirectUri` in `lib/oidc.ts`) from
@@ -204,3 +230,37 @@ Apps' liveness probe) at `/api/healthz`.
   handler into a scratch copy of the test file. Fixed by restoring the safe
   `(req as unknown as {...}).session = {...}` pattern in all three files —
   confirmed with a full rebuild and test run: 65/65 passing (was 55/65).
+
+## 🆕 New in this export: Data Sync Error Log page
+
+New `GET /api/sync/error-log` (behind the same `requireAuth` gate as every
+other admin route — no auth gap here) surfaces recent D365 sync failures,
+deliberately scoped: only the last 1–2 calendar days, and excluding a fixed
+list of known-noisy entity types (`opportunity`, `quote`, `quotedetails`,
+`salesorderssalesorderdetails`) and generic "connection error" messages —
+the query comment explicitly frames this as keeping the log focused on
+actionable, current failures rather than historical noise. New "Data Sync
+Error Log" nav item and `/sync-errors` page in the console. No new
+environment variables, no schema changes — reuses the existing D365 sync
+data source this app already reads from.
+
+## New in this export: app onboarding UX improvements
+
+Two related changes worth knowing about if you're relying on the manual
+Admin Console bootstrap SQL from the section above:
+
+- **`ManageAppsDialog`**'s "Add App" flow (now also reachable via a new
+  button directly on the Security page) creates default **Read Only** and
+  **Read / Write** entitlement roles automatically when onboarding a new
+  app, not just a bare security policy as before — one less manual step
+  when setting up access for a *new* app.
+- **`AccessMapping.tsx`** now lists every user immediately, including ones
+  with zero entitlements yet — previously a newly-created user was
+  invisible in this view until their first role assignment existed.
+
+Neither of these removes the need for the one-time manual SQL bootstrap
+documented above for the Admin Console's *own* self-entitlement on a fresh
+database (that's still a real chicken-and-egg problem: you need to already
+be logged in to use either of these UI improvements) — but they do make
+onboarding every subsequent app and user meaningfully easier once that first
+account exists.
