@@ -12,6 +12,18 @@ import {
 import { getOidcConfig, getRedirectUri } from "../lib/oidc";
 import { logAudit } from "../lib/audit";
 
+const FRONTEND_URL = process.env["FRONTEND_URL"];
+const ADMIN_CONSOLE_FRONTEND_URL =
+  process.env["ADMIN_CONSOLE_FRONTEND_URL"];
+
+  if (!FRONTEND_URL) {
+  throw new Error("FRONTEND_URL is not configured");
+}
+
+if (!ADMIN_CONSOLE_FRONTEND_URL) {
+  throw new Error("ADMIN_CONSOLE_FRONTEND_URL is not configured");
+}
+
 declare module "express-session" {
   interface SessionData {
     codeVerifier?: string;
@@ -27,14 +39,6 @@ declare module "express-session" {
 }
 
 const router: IRouter = Router();
-const targetFrontend="";
-const FRONTEND_URL =
-  process.env["FRONTEND_URL"] ?? "http://localhost:5175";
-
-const ADMIN_CONSOLE_FRONTEND_URL =
-  process.env["ADMIN_CONSOLE_FRONTEND_URL"] ??
-  "http://localhost:5175/admin-console/";
-
 
 router.get("/auth/login", async (req, res, next) => {
   try {
@@ -79,19 +83,21 @@ router.get("/auth/login", async (req, res, next) => {
 
 
 router.get("/auth/callback", async (req, res, next) => {
-  try {
-    const config = await getOidcConfig();
 
+  const authApp = req.session.authApp;
+
+  const targetFrontend =
+    authApp === "admin-console"
+      ? ADMIN_CONSOLE_FRONTEND_URL
+      : FRONTEND_URL;
+
+  try {
+
+    const config = await getOidcConfig();
     const {
     codeVerifier,
     oauthState,
-    authApp,
     } = req.session;
-
-    const targetFrontend =
-    authApp === "admin-console"
-    ? ADMIN_CONSOLE_FRONTEND_URL
-    : FRONTEND_URL;
 
     if (!codeVerifier || !oauthState) {
       // res.redirect("/?auth_error=session_expired");
@@ -214,7 +220,7 @@ router.post("/auth/logout", async (req, res) => {
 
 router.get("/auth/logout", (req, res) => {
   req.session.destroy(() => {
-     res.redirect(targetFrontend);
+     res.redirect(ADMIN_CONSOLE_FRONTEND_URL);
   });
 });
 
