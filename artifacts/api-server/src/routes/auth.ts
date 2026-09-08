@@ -16,6 +16,7 @@ declare module "express-session" {
   interface SessionData {
     codeVerifier?: string;
     oauthState?: string;
+    authApp?: "workspace" | "admin-console";
     user?: {
       id: number;
       entraObjectId: string;
@@ -26,10 +27,26 @@ declare module "express-session" {
 }
 
 const router: IRouter = Router();
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5175";
+const targetFrontend="";
+const FRONTEND_URL =
+  process.env["FRONTEND_URL"] ?? "http://localhost:5175";
+
+const ADMIN_CONSOLE_FRONTEND_URL =
+  process.env["ADMIN_CONSOLE_FRONTEND_URL"] ??
+  "http://localhost:5175/admin-console/";
+
+
 router.get("/auth/login", async (req, res, next) => {
   try {
     const config = await getOidcConfig();
+
+    const app =
+      req.query.app === "admin-console"
+        ? "admin-console"
+        : "workspace";
+
+    req.session.authApp = app;
+
     const codeVerifier = oidcClient.randomPKCECodeVerifier();
     const codeChallenge =
       await oidcClient.calculatePKCECodeChallenge(codeVerifier);
@@ -57,37 +74,28 @@ router.get("/auth/login", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-  // try {
-  //   const config = await getOidcConfig();
-  //   const codeVerifier = oidcClient.randomPKCECodeVerifier();
-  //   const codeChallenge = await oidcClient.calculatePKCECodeChallenge(codeVerifier);
-  //   const state = oidcClient.randomState();
-
-  //   req.session.codeVerifier = codeVerifier;
-  //   req.session.oauthState = state;
-
-  //   const url = oidcClient.buildAuthorizationUrl(config, {
-  //     redirect_uri: getRedirectUri(req),
-  //     scope: "openid profile email",
-  //     code_challenge: codeChallenge,
-  //     code_challenge_method: "S256",
-  //     state,
-  //   });
-  //   res.redirect(url.href);
-  // } catch (err) {
-  //   next(err);
-  // }
-
 });
+
 
 
 router.get("/auth/callback", async (req, res, next) => {
   try {
     const config = await getOidcConfig();
-    const { codeVerifier, oauthState } = req.session;
+
+    const {
+    codeVerifier,
+    oauthState,
+    authApp,
+    } = req.session;
+
+    const targetFrontend =
+    authApp === "admin-console"
+    ? ADMIN_CONSOLE_FRONTEND_URL
+    : FRONTEND_URL;
+
     if (!codeVerifier || !oauthState) {
       // res.redirect("/?auth_error=session_expired");
-      res.redirect(`${FRONTEND_URL}/?auth_error=session_expired`);
+      res.redirect(`${targetFrontend}?auth_error=session_expired`);
       return;
     }
 
@@ -101,7 +109,7 @@ router.get("/auth/callback", async (req, res, next) => {
 
     const claims = tokens.claims();
     if (!claims?.sub) {
-       res.redirect(`${FRONTEND_URL}/?auth_error=no_claims`);
+       res.redirect(`${targetFrontend}?auth_error=no_claims`);
       return;
     }
 
@@ -140,7 +148,7 @@ router.get("/auth/callback", async (req, res, next) => {
         `${name} (${email}) denied Admin Console login — no entitlement assigned`,
         name,
       );
-      res.redirect(`${FRONTEND_URL}/?auth_error=not_authorized`);
+      res.redirect(`${targetFrontend}?auth_error=not_authorized`);
       // res.redirect("/?auth_error=not_authorized");
       return;
     }
@@ -178,7 +186,7 @@ router.get("/auth/callback", async (req, res, next) => {
   } catch (err) {
     req.log.error({ err }, "Entra ID callback failed");
     // res.redirect("/?auth_error=callback_failed");
-    res.redirect(`${FRONTEND_URL}/?auth_error=callback_failed`);
+    res.redirect(`${targetFrontend}?auth_error=callback_failed`);
   }
 });
 
@@ -206,7 +214,7 @@ router.post("/auth/logout", async (req, res) => {
 
 router.get("/auth/logout", (req, res) => {
   req.session.destroy(() => {
-     res.redirect(FRONTEND_URL);
+     res.redirect(targetFrontend);
   });
 });
 
