@@ -12,6 +12,8 @@ import {
 import { getOidcConfig, getRedirectUri } from "../lib/oidc";
 import { logAudit } from "../lib/audit";
 
+const router: IRouter = Router();
+
 const FRONTEND_URL = process.env["FRONTEND_URL"];
 const ADMIN_CONSOLE_FRONTEND_URL =
   process.env["ADMIN_CONSOLE_FRONTEND_URL"];
@@ -37,8 +39,6 @@ declare module "express-session" {
     };
   }
 }
-
-const router: IRouter = Router();
 
 router.get("/auth/login", async (req, res, next) => {
   try {
@@ -187,7 +187,7 @@ router.get("/auth/callback", async (req, res, next) => {
       }); });
       
     await logAudit("login", "Session", `${name} (${email}) signed in via Entra ID`, name);
-    res.redirect(FRONTEND_URL);
+    res.redirect(targetFrontend);
     
   } catch (err) {
     req.log.error({ err }, "Entra ID callback failed");
