@@ -9,7 +9,8 @@ const features = [
 ];
 
 function signIn() {
-  const url = `/api/auth/login`;
+  // const url = `/api/auth/login`;
+  const url = `/api/auth/login?app=admin-console`;
   const target = window.top ?? window;
   try {
     target.location.href = url;
