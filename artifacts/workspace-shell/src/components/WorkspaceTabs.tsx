@@ -135,10 +135,16 @@ function AppFrame({
   const [suspectedBlocked, setSuspectedBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [authPopup, setAuthPopup] = useState<Window | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const isFieldService = app.name === "Field Service Calendar";
 
+  const iframeSrc = isFieldService
+  ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
+  : app.launchUrl;
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
+  
 
   useEffect(() => {
     timerRef.current = setTimeout(() => {
@@ -152,7 +158,7 @@ function AppFrame({
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) {
+      if (event.origin !== "http://localhost:5177") {
         return;
       }
 
@@ -164,8 +170,8 @@ function AppFrame({
         // Give the browser a moment to commit the Field Service
         // session cookie before reloading the iframe.
         setTimeout(() => {
-          window.location.reload();
-        }, 100);
+           iframeRef.current?.contentWindow?.location.reload();
+         }, 100);
       }
     };
 
@@ -230,13 +236,14 @@ function AppFrame({
       )}
 
       <iframe
-         src={`${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`}
+        ref={iframeRef}
+        src={iframeSrc}
         title={app.name}
         data-testid={`iframe-app-${app.id}`}
         className="h-full w-full border-0"
         onLoad={() => {
-          setLoaded(true);
-          setSuspectedBlocked(false);
+            setLoaded(true);
+            setSuspectedBlocked(false);
         }}
         allow="clipboard-write"
       />
