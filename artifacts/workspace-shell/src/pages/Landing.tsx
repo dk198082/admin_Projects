@@ -41,17 +41,17 @@ export function Landing() {
   const authError = new URLSearchParams(window.location.search).get("auth_error");
 
   return (
-    <div className="min-h-[100dvh] bg-[#0b1b3a] text-white flex flex-col">
+    <div className="min-h-[100dvh] bg-ws-bg text-white flex flex-col">
       <header className="flex items-center justify-between px-8 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500">
-            <LayoutGrid className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ws-accent">
+            <LayoutGrid className="h-5 w-5 text-ws-bg" />
           </div>
           <span className="font-bold tracking-tight text-lg">Workspace</span>
         </div>
         <button
           onClick={signIn}
-          className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-[#0b1b3a] hover:bg-white/90"
+          className="flex items-center gap-2 rounded-md bg-ws-accent px-4 py-2 text-sm font-semibold text-ws-bg hover:brightness-95"
         >
           <MicrosoftLogo />
           Sign in with Microsoft
@@ -61,7 +61,7 @@ export function Landing() {
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight max-w-2xl">
           One digital workspace. All your applications.
         </h1>
-        <p className="mt-4 max-w-xl text-white/60 text-lg">
+        <p className="mt-4 max-w-xl text-ws-text-secondary text-lg">
           Sign in once with your organization account to see every application
           you have access to — and open any of them without signing in again.
         </p>
@@ -83,21 +83,21 @@ export function Landing() {
         <div className="mt-8">
           <button
             onClick={signIn}
-            className="flex items-center gap-2 rounded-md bg-white px-6 py-3 text-base font-medium text-[#0b1b3a] hover:bg-white/90"
+            className="flex items-center gap-2 rounded-md bg-ws-accent px-6 py-3 text-base font-semibold text-ws-bg hover:brightness-95"
           >
             <MicrosoftLogo />
             Sign in with Microsoft
           </button>
         </div>
-        <p className="mt-3 text-sm text-white/40">
+        <p className="mt-3 text-sm text-ws-text-secondary/70">
           Sign-in is restricted to your organization's Microsoft Entra ID accounts.
         </p>
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl w-full pb-16">
           {points.map((f) => (
             <div key={f.title} className="rounded-lg border border-white/10 bg-white/5 p-5 text-left">
-              <f.icon className="h-5 w-5 text-blue-400" />
-              <div className="mt-3 font-semibold">{f.title}</div>
-              <div className="mt-1 text-sm text-white/55">{f.text}</div>
+              <f.icon className="h-5 w-5 text-ws-accent" />
+              <div className="mt-3 font-semibold text-white">{f.title}</div>
+              <div className="mt-1 text-sm text-ws-text-secondary">{f.text}</div>
             </div>
           ))}
         </div>

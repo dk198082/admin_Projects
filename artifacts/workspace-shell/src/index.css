@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/*
+ * Digital Workspace brand palette. Defined as named tokens (not scattered
+ * hex codes) so `bg-ws-bg`, `text-ws-accent`, etc. are real, reusable
+ * Tailwind utilities — Tailwind v4 auto-generates a `bg-*`/`text-*`/`border-*`
+ * utility for every `--color-*` token declared here.
+ */
+@theme {
+  --color-ws-bg: #00281d;
+  --color-ws-accent: #b7ff00;
+  --color-ws-text-secondary: #c2d2be;
+}
+
 body {
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
