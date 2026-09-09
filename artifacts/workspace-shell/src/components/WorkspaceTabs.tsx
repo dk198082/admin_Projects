@@ -7,6 +7,7 @@ export interface OpenTab {
 }
 
 const IFRAME_LOAD_TIMEOUT_MS = 12_000;
+const WORKSPACE_ORIGIN = window.location.origin;
 
 interface WorkspaceTabsProps {
   openTabs: OpenTab[];
@@ -124,18 +125,73 @@ function Tab({
   );
 }
 
-function AppFrame({ app, visible }: { app: SidebarApp; visible: boolean }) {
+function AppFrame({
+  app,
+  visible,
+}: {
+  app: SidebarApp;
+  visible: boolean;
+}) {
   const [suspectedBlocked, setSuspectedBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [authPopup, setAuthPopup] = useState<Window | null>(null);
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     timerRef.current = setTimeout(() => {
-      if (!loaded) setSuspectedBlocked(true);
+      if (!loaded) {
+        setSuspectedBlocked(true);
+      }
     }, IFRAME_LOAD_TIMEOUT_MS);
+
     return () => clearTimeout(timerRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE"
+      ) {
+        setAuthPopup(null);
+
+        // Give the browser a moment to commit the Field Service
+        // session cookie before reloading the iframe.
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
   }, []);
+
+  const startEmbeddedLogin = () => {
+    const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
+
+    const popup = window.open(
+      loginUrl,
+      "fieldservice-sso",
+      "width=600,height=700,resizable=yes,scrollbars=yes",
+    );
+
+    if (popup) {
+      setAuthPopup(popup);
+      popup.focus();
+    } else {
+      window.open(loginUrl, "_blank");
+    }
+  };
 
   return (
     <div
@@ -150,19 +206,31 @@ function AppFrame({ app, visible }: { app: SidebarApp; visible: boolean }) {
             <strong>{app.name}</strong> is taking a while to load — it may not
             allow opening inside the Workspace.
           </span>
-          <a
-            href={app.launchUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex shrink-0 items-center gap-1 rounded-md border border-amber-300 bg-white px-2.5 py-1 font-medium hover:bg-amber-100"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open in new tab instead
-          </a>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={startEmbeddedLogin}
+              className="rounded-md border border-amber-300 bg-white px-2.5 py-1 font-medium hover:bg-amber-100"
+            >
+              Sign in
+            </button>
+
+            <a
+              href={app.launchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2.5 py-1 font-medium hover:bg-amber-100"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open in new tab
+            </a>
+          </div>
         </div>
       )}
+
       <iframe
-        src={app.launchUrl}
+         src={`${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`}
         title={app.name}
         data-testid={`iframe-app-${app.id}`}
         className="h-full w-full border-0"
@@ -170,12 +238,64 @@ function AppFrame({ app, visible }: { app: SidebarApp; visible: boolean }) {
           setLoaded(true);
           setSuspectedBlocked(false);
         }}
-        // Deliberately no `sandbox` attribute: these are trusted, first-party
-        // organizational apps (not arbitrary third-party content), and they
-        // need normal cookie/storage/navigation behavior for their own
-        // Entra ID session to work — sandboxing would break that.
         allow="clipboard-write"
       />
     </div>
   );
 }
+
+// function AppFrame({ app, visible }: { app: SidebarApp; visible: boolean }) {
+//   const [suspectedBlocked, setSuspectedBlocked] = useState(false);
+//   const [loaded, setLoaded] = useState(false);
+//   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+//   useEffect(() => {
+//     timerRef.current = setTimeout(() => {
+//       if (!loaded) setSuspectedBlocked(true);
+//     }, IFRAME_LOAD_TIMEOUT_MS);
+//     return () => clearTimeout(timerRef.current);
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, []);
+
+//   return (
+//     <div
+//       className="absolute inset-0"
+//       style={{ display: visible ? "block" : "none" }}
+//       data-testid={`frame-container-${app.id}`}
+//     >
+//       {suspectedBlocked && (
+//         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+//           <span className="flex items-center gap-2">
+//             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+//             <strong>{app.name}</strong> is taking a while to load — it may not
+//             allow opening inside the Workspace.
+//           </span>
+//           <a
+//             href={app.launchUrl}
+//             target="_blank"
+//             rel="noopener noreferrer"
+//             className="flex shrink-0 items-center gap-1 rounded-md border border-amber-300 bg-white px-2.5 py-1 font-medium hover:bg-amber-100"
+//           >
+//             <ExternalLink className="h-3.5 w-3.5" />
+//             Open in new tab instead
+//           </a>
+//         </div>
+//       )}
+//       <iframe
+//         src={app.launchUrl}
+//         title={app.name}
+//         data-testid={`iframe-app-${app.id}`}
+//         className="h-full w-full border-0"
+//         onLoad={() => {
+//           setLoaded(true);
+//           setSuspectedBlocked(false);
+//         }}
+//         // Deliberately no `sandbox` attribute: these are trusted, first-party
+//         // organizational apps (not arbitrary third-party content), and they
+//         // need normal cookie/storage/navigation behavior for their own
+//         // Entra ID session to work — sandboxing would break that.
+//         allow="clipboard-write"
+//       />
+//     </div>
+//   );
+// }
