@@ -41,21 +41,37 @@ export function Workspace({ user }: { user: AuthUser }) {
       return prev;
     }
 
-    // For Field Service, create the popup immediately while this
-    // function is still running directly from the user's click.
+    // Start Field Service SSO directly from the user's click.
     if (isFieldService) {
       const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
 
+      const popupWidth = 480;
+      const popupHeight = 600;
+
+      const Center = Math.max(
+        0,
+        Math.round((window.screen.availWidth - popupWidth) / 2),
+      );
+
+      const top = Math.max(
+        0,
+        Math.round((window.screen.availHeight - popupHeight) / 2),
+      );
+
       const popup = window.open(
-        "about:blank",
+        loginUrl,
         "fieldservice-sso",
-        "width=600,height=700,resizable=yes,scrollbars=yes",
+        [
+          `width=${popupWidth}`,
+          `height=${popupHeight}`,
+          `Center=${Center}`,
+          `top=${top}`,
+          "resizable=yes",
+          "scrollbars=yes",
+        ].join(","),
       );
 
       if (popup) {
-        // The blank popup is created from the user's click, so the
-        // browser allows it. Now send it to the Field Service login.
-        popup.location.href = loginUrl;
         popup.focus();
       }
     }
