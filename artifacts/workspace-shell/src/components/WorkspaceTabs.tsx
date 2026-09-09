@@ -7,7 +7,7 @@ export interface OpenTab {
 }
 
 const IFRAME_LOAD_TIMEOUT_MS = 12_000;
-const WORKSPACE_ORIGIN = window.location.origin;
+//const WORKSPACE_ORIGIN = window.location.origin;
 
 interface WorkspaceTabsProps {
   openTabs: OpenTab[];
@@ -158,9 +158,13 @@ function AppFrame({
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== "http://localhost:5177") {
+      if (!isFieldService) {
         return;
       }
+
+      if (event.origin !== "http://localhost:5177") {
+          return;
+       }
 
       if (
         event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE"
@@ -180,7 +184,7 @@ function AppFrame({
     return () => {
       window.removeEventListener("message", handleMessage);
     };
-  }, []);
+  }, [isFieldService]);
 
   const startEmbeddedLogin = () => {
     const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
