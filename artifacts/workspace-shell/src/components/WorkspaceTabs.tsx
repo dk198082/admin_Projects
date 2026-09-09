@@ -175,7 +175,7 @@ function AppFrame({
         // session cookie before reloading the iframe.
         setTimeout(() => {
            iframeRef.current?.contentWindow?.location.reload();
-         }, 100);
+         }, 1000);
       }
     };
 
