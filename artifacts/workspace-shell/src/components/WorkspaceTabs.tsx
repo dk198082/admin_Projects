@@ -137,6 +137,8 @@ function AppFrame({
   const [authPopup, setAuthPopup] = useState<Window | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const isFieldService = app.name === "Field Service Calendar";
+  const FIELD_SERVICE_ORIGIN =
+  new URL(import.meta.env.VITE_FIELD_SERVICE_URL).origin;
 
   const iframeSrc = isFieldService
   ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
@@ -162,9 +164,9 @@ function AppFrame({
         return;
       }
 
-      if (event.origin !== "http://localhost:5177") {
-          return;
-       }
+      if (event.origin !== FIELD_SERVICE_ORIGIN) {
+        return;
+      }
 
       if (
         event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE"
