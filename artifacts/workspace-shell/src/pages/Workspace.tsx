@@ -33,12 +33,38 @@ export function Workspace({ user }: { user: AuthUser }) {
   const [activeAppId, setActiveAppId] = useState<number | null>(null);
 
   const openApp = useCallback((app: SidebarApp) => {
-    setOpenTabs((prev) => {
-      if (prev.some((t) => t.app.id === app.id)) return prev;
-      return [...prev, { app }];
-    });
-    setActiveAppId(app.id);
-  }, []);
+  const isFieldService = app.name === "Field Service Calendar";
+
+  setOpenTabs((prev) => {
+    // If the tab is already open, just activate it.
+    if (prev.some((t) => t.app.id === app.id)) {
+      return prev;
+    }
+
+    // For Field Service, create the popup immediately while this
+    // function is still running directly from the user's click.
+    if (isFieldService) {
+      const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
+
+      const popup = window.open(
+        "about:blank",
+        "fieldservice-sso",
+        "width=600,height=700,resizable=yes,scrollbars=yes",
+      );
+
+      if (popup) {
+        // The blank popup is created from the user's click, so the
+        // browser allows it. Now send it to the Field Service login.
+        popup.location.href = loginUrl;
+        popup.focus();
+      }
+    }
+
+    return [...prev, { app }];
+  });
+
+  setActiveAppId(app.id);
+}, []);
 
   const closeTab = useCallback(
     (appId: number) => {
