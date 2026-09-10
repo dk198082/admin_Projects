@@ -136,7 +136,7 @@ function AppFrame({
   const [suspectedBlocked, setSuspectedBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [iframeVersion, setIframeVersion] = useState(0);
-
+  
 
   const isFieldService = app.name === "Field Service Calendar";
   const isProductionShopFloor = app.name === "Production Shop Floor";
@@ -155,10 +155,13 @@ function AppFrame({
     ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
     : app.launchUrl;
 
-   
+const [embeddedAuthReady, setEmbeddedAuthReady] = useState(
+  !isFieldService && !isProductionShopFloor,
+);
+
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined,
   );
-  
+ 
  useEffect(() => {
   if (!isFieldService && !isProductionShopFloor) return;
 
@@ -188,6 +191,7 @@ function AppFrame({
       return;
     }
 
+    setEmbeddedAuthReady(true);
     setLoaded(false);
     setSuspectedBlocked(false);
     setIframeVersion((version) => version + 1);
@@ -294,16 +298,16 @@ function AppFrame({
         </div>
       )}
 
-      <iframe
-        key={`${app.id}-${iframeVersion}`}
-        src={iframeSrc}
-        title={app.name}
-        className="absolute inset-0 h-full w-full border-0"
-        style={{
-            display: visible ? "block" : "none",
-          }}
-        onLoad={() => setLoaded(true)}
-      />
+      {embeddedAuthReady && (
+          <iframe
+            key={`${app.id}-${iframeVersion}`}
+            src={iframeSrc}
+            title={app.name}
+            className="absolute inset-0 h-full w-full border-0"
+            style={{ display: visible ? "block" : "none" }}
+            onLoad={() => setLoaded(true)}
+          />
+      )}
     </div>
   );
 }
