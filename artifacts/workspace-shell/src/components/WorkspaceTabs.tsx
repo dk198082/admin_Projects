@@ -136,6 +136,9 @@ function AppFrame({
   const [loaded, setLoaded] = useState(false);
   const [authPopup, setAuthPopup] = useState<Window | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const [iframeVersion, setIframeVersion] = useState(0);
+
   const isFieldService = app.name === "Field Service Calendar";
   const FIELD_SERVICE_ORIGIN =
   new URL(import.meta.env.VITE_FIELD_SERVICE_URL).origin;
@@ -143,8 +146,8 @@ function AppFrame({
   const iframeSrc = isFieldService
   ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
   : app.launchUrl;
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined,
   );
   
 
@@ -173,11 +176,16 @@ function AppFrame({
       ) {
         setAuthPopup(null);
 
+        // Force the Field Service iframe to be recreated after
+        // the authenticated session has been established.
+          setLoaded(false);
+          setSuspectedBlocked(false);
+
         // Give the browser a moment to commit the Field Service
         // session cookie before reloading the iframe.
         setTimeout(() => {
-           iframeRef.current?.contentWindow?.location.reload();
-         }, 1000);
+              setIframeVersion((version) => version + 1);
+          }, 300);
       }
     };
 
@@ -242,6 +250,7 @@ function AppFrame({
       )}
 
       <iframe
+        key={`${app.id}-${iframeVersion}`}
         ref={iframeRef}
         src={iframeSrc}
         title={app.name}
