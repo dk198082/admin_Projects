@@ -33,7 +33,9 @@ export function Workspace({ user }: { user: AuthUser }) {
   const [activeAppId, setActiveAppId] = useState<number | null>(null);
 
   const openApp = useCallback((app: SidebarApp) => {
+    
   const isFieldService = app.name === "Field Service Calendar";
+  const isProductionShopFloor = app.name === "Production Shop Floor";
 
   setOpenTabs((prev) => {
     // If the tab is already open, just activate it.
@@ -42,8 +44,12 @@ export function Workspace({ user }: { user: AuthUser }) {
     }
 
     // Start Field Service SSO directly from the user's click.
-    if (isFieldService) {
-      const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
+    if (isFieldService || isProductionShopFloor) {
+      const loginPath = isFieldService
+        ? "/api/login?embedded=1"
+        : "/api/auth/login?embedded=1";
+
+      const loginUrl = `${app.launchUrl.replace(/\/$/, "")}${loginPath}`;
 
       const popupWidth = 480;
       const popupHeight = 600;
