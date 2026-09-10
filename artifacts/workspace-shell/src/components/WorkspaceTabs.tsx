@@ -132,12 +132,14 @@ function AppFrame({
   app: SidebarApp;
   visible: boolean;
 }) {
+
   const [suspectedBlocked, setSuspectedBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [authPopup, setAuthPopup] = useState<Window | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
   const [iframeVersion, setIframeVersion] = useState(0);
+
+
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const isFieldService = app.name === "Field Service Calendar";
   const FIELD_SERVICE_ORIGIN =
@@ -171,21 +173,13 @@ function AppFrame({
         return;
       }
 
-      if (
-        event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE"
-      ) {
+      if (event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE") {
         setAuthPopup(null);
 
-        // Force the Field Service iframe to be recreated after
-        // the authenticated session has been established.
-          setLoaded(false);
-          setSuspectedBlocked(false);
-
-        // Give the browser a moment to commit the Field Service
-        // session cookie before reloading the iframe.
-        setTimeout(() => {
-              setIframeVersion((version) => version + 1);
-          }, 300);
+            // Force React to create a completely new iframe.
+            // The new iframe will send its first request with the
+            // newly-created fieldservice.sid cookie.
+            setIframeVersion((version) => version + 1);
       }
     };
 
@@ -251,16 +245,13 @@ function AppFrame({
 
       <iframe
         key={`${app.id}-${iframeVersion}`}
-        ref={iframeRef}
         src={iframeSrc}
         title={app.name}
-        data-testid={`iframe-app-${app.id}`}
-        className="h-full w-full border-0"
-        onLoad={() => {
-            setLoaded(true);
-            setSuspectedBlocked(false);
-        }}
-        allow="clipboard-write"
+        className="absolute inset-0 h-full w-full border-0"
+        style={{
+            display: visible ? "block" : "none",
+          }}
+        onLoad={() => setLoaded(true)}
       />
     </div>
   );
