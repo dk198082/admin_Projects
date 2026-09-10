@@ -139,59 +139,73 @@ function AppFrame({
 
 
   const isFieldService = app.name === "Field Service Calendar";
+  const isProductionShopFloor = app.name === "Production Shop Floor";
 
   const FIELD_SERVICE_ORIGIN = isFieldService
   ? new URL(app.launchUrl).origin
   : null;
 
-  const iframeSrc = isFieldService
-  ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
-  : app.launchUrl;
+  const PRODUCTION_ORIGIN = isProductionShopFloor
+  ? new URL(app.launchUrl).origin
+  : null;
 
+
+  const iframeSrc =
+  isFieldService || isProductionShopFloor
+    ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
+    : app.launchUrl;
+
+   
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined,
   );
   
-
  useEffect(() => {
-    if (!isFieldService) {
-        return;
-    }
-    timerRef.current = setTimeout(() => {
-    if (!loaded) {
-      setSuspectedBlocked(true);
-    }
+  if (!isFieldService && !isProductionShopFloor) return;
+
+  timerRef.current = setTimeout(() => {
+    if (!loaded) setSuspectedBlocked(true);
   }, IFRAME_LOAD_TIMEOUT_MS);
 
   return () => clearTimeout(timerRef.current);
-  }, [loaded, isFieldService]);
+}, [loaded, isFieldService, isProductionShopFloor]);
+
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (!isFieldService) {
-        return;
-      }
+  const handleMessage = (event: MessageEvent) => {
+    const isValidFieldServiceMessage =
+      isFieldService &&
+      FIELD_SERVICE_ORIGIN &&
+      event.origin === FIELD_SERVICE_ORIGIN &&
+      event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE";
 
-      if (!FIELD_SERVICE_ORIGIN || event.origin !== FIELD_SERVICE_ORIGIN) {
-          return;
-        }
+    const isValidProductionMessage =
+      isProductionShopFloor &&
+      PRODUCTION_ORIGIN &&
+      event.origin === PRODUCTION_ORIGIN &&
+      event.data?.type === "PRODUCTION_AUTH_COMPLETE";
 
-      if (event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE") {
+    if (!isValidFieldServiceMessage && !isValidProductionMessage) {
+      return;
+    }
 
-            // Create a completely new iframe so it starts
-            // with the newly-created fieldservice.sid cookie.
-            setLoaded(false);
-            setSuspectedBlocked(false);
+    setLoaded(false);
+    setSuspectedBlocked(false);
+    setIframeVersion((version) => version + 1);
+  };
 
-            setIframeVersion((version) => version + 1);
-      }
-    };
+  window.addEventListener("message", handleMessage);
 
-    window.addEventListener("message", handleMessage);
+  return () => {
+    window.removeEventListener("message", handleMessage);
+  };
+}, [
+  isFieldService,
+  FIELD_SERVICE_ORIGIN,
+  isProductionShopFloor,
+  PRODUCTION_ORIGIN,
+]);
 
-    return () => {
-      window.removeEventListener("message", handleMessage);
-    };
-  }, [isFieldService, FIELD_SERVICE_ORIGIN]);
+
 
   async function checkFieldServiceSession(): Promise<boolean> {
   try {
@@ -214,12 +228,27 @@ function AppFrame({
 
 
   const startEmbeddedLogin = () => {
-    const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
+    const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/auth/login?embedded=1`;
+
+    const width = 480;
+    const height = 600;
+
+    const left =
+      window.screenX +
+      Math.max(0, (window.outerWidth - width) / 2);
+
+    const top =
+      window.screenY +
+      Math.max(0, (window.outerHeight - height) / 2);
 
     const popup = window.open(
       loginUrl,
-      "fieldservice-sso",
-      "width=600,height=700,resizable=yes,scrollbars=yes",
+      "production-sso",
+      `width=${width},height=${height},left=${Math.round(
+        left,
+      )},top=${Math.round(
+        top,
+      )},resizable=yes,scrollbars=yes`,
     );
 
     if (popup) {
@@ -227,7 +256,7 @@ function AppFrame({
     } else {
       window.open(loginUrl, "_blank");
     }
-  };
+};
 
   return (
     <div
