@@ -153,14 +153,17 @@ function AppFrame({
   
 
  useEffect(() => {
+    if (!isFieldService) {
+        return;
+    }
     timerRef.current = setTimeout(() => {
-      if (!loaded) {
-        setSuspectedBlocked(true);
-      }
-    }, IFRAME_LOAD_TIMEOUT_MS);
+    if (!loaded) {
+      setSuspectedBlocked(true);
+    }
+  }, IFRAME_LOAD_TIMEOUT_MS);
 
-    return () => clearTimeout(timerRef.current);
-  }, [loaded]);
+  return () => clearTimeout(timerRef.current);
+  }, [loaded, isFieldService]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -189,6 +192,26 @@ function AppFrame({
       window.removeEventListener("message", handleMessage);
     };
   }, [isFieldService, FIELD_SERVICE_ORIGIN]);
+
+  async function checkFieldServiceSession(): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${app.launchUrl.replace(/\/$/, "")}/api/me`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 
   const startEmbeddedLogin = () => {
     const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
