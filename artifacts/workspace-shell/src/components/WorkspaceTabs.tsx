@@ -135,15 +135,14 @@ function AppFrame({
 
   const [suspectedBlocked, setSuspectedBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [authPopup, setAuthPopup] = useState<Window | null>(null);
   const [iframeVersion, setIframeVersion] = useState(0);
 
 
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
   const isFieldService = app.name === "Field Service Calendar";
-  const FIELD_SERVICE_ORIGIN =
-  new URL(import.meta.env.VITE_FIELD_SERVICE_URL).origin;
+
+  const FIELD_SERVICE_ORIGIN = isFieldService
+  ? new URL(app.launchUrl).origin
+  : null;
 
   const iframeSrc = isFieldService
   ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
@@ -153,7 +152,7 @@ function AppFrame({
   );
   
 
-  useEffect(() => {
+ useEffect(() => {
     timerRef.current = setTimeout(() => {
       if (!loaded) {
         setSuspectedBlocked(true);
@@ -169,16 +168,17 @@ function AppFrame({
         return;
       }
 
-      if (event.origin !== FIELD_SERVICE_ORIGIN) {
-        return;
-      }
+      if (!FIELD_SERVICE_ORIGIN || event.origin !== FIELD_SERVICE_ORIGIN) {
+          return;
+        }
 
       if (event.data?.type === "FIELD_SERVICE_AUTH_COMPLETE") {
-        setAuthPopup(null);
 
-            // Force React to create a completely new iframe.
-            // The new iframe will send its first request with the
-            // newly-created fieldservice.sid cookie.
+            // Create a completely new iframe so it starts
+            // with the newly-created fieldservice.sid cookie.
+            setLoaded(false);
+            setSuspectedBlocked(false);
+
             setIframeVersion((version) => version + 1);
       }
     };
@@ -188,7 +188,7 @@ function AppFrame({
     return () => {
       window.removeEventListener("message", handleMessage);
     };
-  }, [isFieldService]);
+  }, [isFieldService, FIELD_SERVICE_ORIGIN]);
 
   const startEmbeddedLogin = () => {
     const loginUrl = `${app.launchUrl.replace(/\/$/, "")}/api/login?embedded=1`;
@@ -200,7 +200,6 @@ function AppFrame({
     );
 
     if (popup) {
-      setAuthPopup(popup);
       popup.focus();
     } else {
       window.open(loginUrl, "_blank");
