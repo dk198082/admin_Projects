@@ -133,13 +133,16 @@ function AppFrame({
   visible: boolean;
 }) {
 
+  const isFieldService = app.name === "Field Service Calendar";
+  const isProductionShopFloor = app.name === "Production Shop Floor";
+
   const [suspectedBlocked, setSuspectedBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [iframeVersion, setIframeVersion] = useState(0);
-  
 
-  const isFieldService = app.name === "Field Service Calendar";
-  const isProductionShopFloor = app.name === "Production Shop Floor";
+  const [embeddedAuthReady, setEmbeddedAuthReady] = useState(
+  !isFieldService && !isProductionShopFloor,
+);
 
   const FIELD_SERVICE_ORIGIN = isFieldService
   ? new URL(app.launchUrl).origin
@@ -155,26 +158,30 @@ function AppFrame({
     ? `${app.launchUrl}${app.launchUrl.includes("?") ? "&" : "?"}embedded=1`
     : app.launchUrl;
 
-const [embeddedAuthReady, setEmbeddedAuthReady] = useState(
-  !isFieldService && !isProductionShopFloor,
-);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined,);
 
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined,
-  );
  
  useEffect(() => {
   if (!isFieldService && !isProductionShopFloor) return;
+  if (!embeddedAuthReady) return;
 
   timerRef.current = setTimeout(() => {
-    if (!loaded) setSuspectedBlocked(true);
+    if (!loaded) {
+      setSuspectedBlocked(true);
+    }
   }, IFRAME_LOAD_TIMEOUT_MS);
 
   return () => clearTimeout(timerRef.current);
-}, [loaded, isFieldService, isProductionShopFloor]);
+}, [
+  loaded,
+  embeddedAuthReady,
+  isFieldService,
+  isProductionShopFloor,
+]);
 
 
   useEffect(() => {
-  const handleMessage = (event: MessageEvent) => {
+    const handleMessage = (event: MessageEvent) => {
     const isValidFieldServiceMessage =
       isFieldService &&
       FIELD_SERVICE_ORIGIN &&
@@ -191,10 +198,10 @@ const [embeddedAuthReady, setEmbeddedAuthReady] = useState(
       return;
     }
 
-    setEmbeddedAuthReady(true);
-    setLoaded(false);
-    setSuspectedBlocked(false);
-    setIframeVersion((version) => version + 1);
+      setEmbeddedAuthReady(true);
+      setLoaded(false);
+      setSuspectedBlocked(false);
+      setIframeVersion((version) => version + 1);
   };
 
   window.addEventListener("message", handleMessage);
@@ -304,10 +311,15 @@ const [embeddedAuthReady, setEmbeddedAuthReady] = useState(
             src={iframeSrc}
             title={app.name}
             className="absolute inset-0 h-full w-full border-0"
-            style={{ display: visible ? "block" : "none" }}
-            onLoad={() => setLoaded(true)}
+            style={{
+              display: visible ? "block" : "none",
+            }}
+            onLoad={() => {
+              setLoaded(true);
+              setSuspectedBlocked(false);
+            }}
           />
-      )}
+        )}
     </div>
   );
 }
