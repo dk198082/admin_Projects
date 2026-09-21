@@ -40,12 +40,22 @@ function optionalText(value: string | null | undefined): string | null | undefin
 }
 
 router.get("/apps", async (_req, res): Promise<void> => {
-  const apps = await db.select().from(appsTable).orderBy(asc(appsTable.id));
+  const apps = await db
+    .select()
+    .from(appsTable)
+    .orderBy(asc(appsTable.id));
+
   const resources = await db.select().from(resourcesTable);
+
   const result = apps.map((a) => ({
     ...a,
+    launchUrl: a.launchUrl ?? "",
+    description: a.description ?? "",
+    icon: a.icon ?? "",
+    category: a.category ?? "",
     resourceCount: resources.filter((r) => r.appId === a.id).length,
   }));
+
   res.json(ListAppsResponse.parse(result));
 });
 
