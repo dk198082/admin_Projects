@@ -29,8 +29,10 @@ import type {
   AccessMappingEntry,
   AccessMappingRemoveInput,
   AccessMappingRemoveResult,
+  ActivityReport,
   ApiKeySummary,
   App,
+  AppCreateInput,
   AppInput,
   AuditEntry,
   BulkDeleteUsersInput,
@@ -46,6 +48,7 @@ import type {
   DeniedAccessSummary,
   EntraUser,
   ErrorMessage,
+  GetActivityReportParams,
   GetDeniedAccessSummaryParams,
   HealthStatus,
   ListAccessGrantsParams,
@@ -1366,14 +1369,14 @@ export const getCreateAppUrl = () => {
 /**
  * @summary Onboard a new application (creates a default security policy)
  */
-export const createApp = async (appInput: AppInput, options?: RequestInit): Promise<App> => {
+export const createApp = async (appCreateInput: AppCreateInput, options?: RequestInit): Promise<App> => {
 
   return customFetch<App>(getCreateAppUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(appInput)
+    body: JSON.stringify(appCreateInput)
   }
 );}
 
@@ -1381,8 +1384,8 @@ export const createApp = async (appInput: AppInput, options?: RequestInit): Prom
 
 
 export const getCreateAppMutationOptions = <TError = ErrorType<ErrorMessage>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppCreateInput>}, TContext> => {
 
 const mutationKey = ['createApp'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1394,7 +1397,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApp>>, {data: BodyType<AppInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApp>>, {data: BodyType<AppCreateInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  createApp(data,requestOptions)
@@ -1408,18 +1411,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CreateAppMutationResult = NonNullable<Awaited<ReturnType<typeof createApp>>>
-    export type CreateAppMutationBody = BodyType<AppInput>
+    export type CreateAppMutationBody = BodyType<AppCreateInput>
     export type CreateAppMutationError = ErrorType<ErrorMessage>
 
     /**
  * @summary Onboard a new application (creates a default security policy)
  */
 export const useCreateApp = <TError = ErrorType<ErrorMessage>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApp>>, TError,{data: BodyType<AppCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createApp>>,
         TError,
-        {data: BodyType<AppInput>},
+        {data: BodyType<AppCreateInput>},
         TContext
       > => {
       return useMutation(getCreateAppMutationOptions(options));
@@ -2537,6 +2540,98 @@ export function useListAuditLog<TData = Awaited<ReturnType<typeof listAuditLog>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListAuditLogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetActivityReportUrl = (params?: GetActivityReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["person"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/activity-report?${stringifiedParams}` : `/api/activity-report`
+}
+
+/**
+ * @summary Aggregate successful application access checks by person and application
+ */
+export const getActivityReport = async (params?: GetActivityReportParams, options?: RequestInit): Promise<ActivityReport> => {
+
+  return customFetch<ActivityReport>(getGetActivityReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetActivityReportQueryKey = (params?: GetActivityReportParams,) => {
+    return [
+    `/api/activity-report`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetActivityReportQueryOptions = <TData = Awaited<ReturnType<typeof getActivityReport>>, TError = ErrorType<ErrorMessage>>(params?: GetActivityReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActivityReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetActivityReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getActivityReport>>> = ({ signal }) => getActivityReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getActivityReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetActivityReportQueryResult = NonNullable<Awaited<ReturnType<typeof getActivityReport>>>
+export type GetActivityReportQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Aggregate successful application access checks by person and application
+ */
+
+export function useGetActivityReport<TData = Awaited<ReturnType<typeof getActivityReport>>, TError = ErrorType<ErrorMessage>>(
+ params?: GetActivityReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActivityReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetActivityReportQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

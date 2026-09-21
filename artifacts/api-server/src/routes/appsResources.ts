@@ -33,6 +33,12 @@ import {
 
 const router: IRouter = Router();
 
+function optionalText(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value?.trim() ?? "";
+  return trimmed || null;
+}
+
 router.get("/apps", async (_req, res): Promise<void> => {
   const apps = await db.select().from(appsTable).orderBy(asc(appsTable.id));
   const resources = await db.select().from(resourcesTable);
@@ -54,6 +60,24 @@ router.post("/apps", async (req, res): Promise<void> => {
     res.status(400).json({ error: "App name is required" });
     return;
   }
+  const resources = (parsed.data.resources ?? []).map((resource) => ({
+    name: resource.name.trim(),
+    type: resource.type,
+    description: resource.description?.trim() ?? "",
+  }));
+  if (resources.some((resource) => !resource.name)) {
+    res.status(400).json({ error: "Resource names are required" });
+    return;
+  }
+  const resourceNames = new Set<string>();
+  for (const resource of resources) {
+    const normalized = resource.name.toLowerCase();
+    if (resourceNames.has(normalized)) {
+      res.status(400).json({ error: `Duplicate resource name "${resource.name}"` });
+      return;
+    }
+    resourceNames.add(normalized);
+  }
   const [existing] = await db
     .select({ id: appsTable.id })
     .from(appsTable)
@@ -63,18 +87,32 @@ router.post("/apps", async (req, res): Promise<void> => {
     return;
   }
   const created = await db.transaction(async (tx) => {
-    const [app] = await tx.insert(appsTable).values({ name }).returning();
+    const [app] = await tx
+      .insert(appsTable)
+      .values({
+        name,
+        launchUrl: optionalText(parsed.data.launchUrl),
+        description: optionalText(parsed.data.description),
+        icon: optionalText(parsed.data.icon),
+        category: optionalText(parsed.data.category),
+      })
+      .returning();
     await tx.insert(securityPoliciesTable).values({ appId: app.id });
+    if (resources.length > 0) {
+      await tx.insert(resourcesTable).values(
+        resources.map((resource) => ({ appId: app.id, ...resource })),
+      );
+    }
     await ensureEntitlementsForApp(app.id, app.name, tx);
     return app;
   });
   await logAudit(
     "create",
     "App",
-    `Onboarded app ${name} with default security policy and Read Only / Read / Write entitlement roles`,
+    `Onboarded app ${name} with ${resources.length} resources, default security policy, and Read Only / Read / Write entitlement roles`,
     req.session.user?.name,
   );
-  res.status(201).json(CreateAppResponse.parse({ ...created, resourceCount: 0 }));
+  res.status(201).json(CreateAppResponse.parse({ ...created, resourceCount: resources.length }));
 });
 
 router.patch("/apps/:id", async (req, res): Promise<void> => {
@@ -107,9 +145,16 @@ router.patch("/apps/:id", async (req, res): Promise<void> => {
     return;
   }
   const updated = await db.transaction(async (tx) => {
+    const appUpdates = {
+      name,
+      launchUrl: optionalText(parsed.data.launchUrl),
+      description: optionalText(parsed.data.description),
+      icon: optionalText(parsed.data.icon),
+      category: optionalText(parsed.data.category),
+    };
     const [row] = await tx
       .update(appsTable)
-      .set({ name })
+      .set(appUpdates)
       .where(eq(appsTable.id, app.id))
       .returning();
     // api_keys reference apps by name — keep them in sync on rename
@@ -124,9 +169,14 @@ router.patch("/apps/:id", async (req, res): Promise<void> => {
     .select({ count: sql<number>`count(*)::int` })
     .from(resourcesTable)
     .where(eq(resourcesTable.appId, app.id));
-  if (app.name !== name) {
-    await logAudit("update", "App", `Renamed app ${app.name} to ${name}`, req.session.user?.name);
-  }
+  await logAudit(
+    "update",
+    "App",
+    app.name !== name
+      ? `Renamed app ${app.name} to ${name} and updated its Workspace tile`
+      : `Updated Workspace tile for ${name}`,
+    req.session.user?.name,
+  );
   res.json(UpdateAppResponse.parse({ ...updated, resourceCount: count }));
 });
 

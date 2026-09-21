@@ -9,6 +9,7 @@ node_modules
 .gitignore
 attached_assets
 docs
+reports
 *.md
 !AZURE_DEPLOYMENT.md
 

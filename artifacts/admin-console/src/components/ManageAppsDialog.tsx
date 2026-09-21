@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 function errMsg(err: unknown, fallback: string): string {
@@ -31,6 +32,12 @@ function errMsg(err: unknown, fallback: string): string {
 }
 
 const RESOURCE_TYPES = ["Tab", "Form", "Table"] as const;
+type ResourceType = (typeof RESOURCE_TYPES)[number];
+type AppResourceDraft = { name: string; type: ResourceType };
+
+function emptyResource(): AppResourceDraft {
+  return { name: "", type: "Tab" };
+}
 
 function typeIcon(type: string) {
   switch (type) {
@@ -52,24 +59,64 @@ export function AddAppDialog({
   const { toast } = useToast();
   const createApp = useCreateApp();
   const [name, setName] = useState("");
+  const [launchUrl, setLaunchUrl] = useState("");
+  const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState("");
+  const [category, setCategory] = useState("");
+  const [resources, setResources] = useState<AppResourceDraft[]>([emptyResource()]);
 
   const handleCreate = () => {
     if (!name.trim()) {
       toast({ title: "App name is required", variant: "destructive" });
       return;
     }
+    if (launchUrl.trim()) {
+      try {
+        new URL(launchUrl.trim());
+      } catch {
+        toast({ title: "Launch URL must be a valid web address", variant: "destructive" });
+        return;
+      }
+    }
+    const populatedResources = resources
+      .filter((resource) => resource.name.trim())
+      .map((resource) => ({ ...resource, name: resource.name.trim() }));
+    const names = new Set<string>();
+    for (const resource of populatedResources) {
+      const normalized = resource.name.toLowerCase();
+      if (names.has(normalized)) {
+        toast({ title: `Duplicate resource "${resource.name}"`, variant: "destructive" });
+        return;
+      }
+      names.add(normalized);
+    }
     createApp.mutate(
-      { data: { name: name.trim() } },
+      {
+        data: {
+          name: name.trim(),
+          launchUrl: launchUrl.trim() || null,
+          description: description.trim() || null,
+          icon: icon.trim() || null,
+          category: category.trim() || null,
+          resources: populatedResources,
+        },
+      },
       {
         onSuccess: (app) => {
           queryClient.invalidateQueries({ queryKey: getListAppsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListResourcesQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListSecurityPoliciesQueryKey() });
           setName("");
+          setLaunchUrl("");
+          setDescription("");
+          setIcon("");
+          setCategory("");
+          setResources([emptyResource()]);
           onOpenChange(false);
           toast({
             title: `App "${app.name}" onboarded`,
             description:
-              "A default security policy plus Read Only and Read / Write entitlement roles were created. Now add its resources.",
+              `${app.resourceCount} resource${app.resourceCount === 1 ? "" : "s"}, a default security policy, and Read Only / Read / Write entitlement roles were created.`,
           });
           onCreated?.(app.id);
         },
@@ -81,24 +128,133 @@ export function AddAppDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px]">
+      <DialogContent className="sm:max-w-[620px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Application</DialogTitle>
           <DialogDescription>
             Onboard a new app. A default security policy and Read Only / Read / Write entitlement
-            roles are created automatically. Then add the app's resources (tabs, forms, tables) so
-            users can be granted access from Map User Security Access.
+            roles are created automatically. Add tabs, forms, and tables now so the app is ready for
+            access mapping immediately.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2 py-2">
-          <Label htmlFor="app-name">App Name</Label>
-          <Input
-            id="app-name"
-            placeholder="e.g. Inventory Portal"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
-          />
+        <div className="space-y-4 py-2">
+          <div className="grid gap-2">
+            <Label htmlFor="app-name">App Name</Label>
+            <Input
+              id="app-name"
+              placeholder="e.g. Inventory Portal"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="app-launch-url">Workspace Launch URL</Label>
+              <Input
+                id="app-launch-url"
+                type="url"
+                placeholder="https://app.example.com"
+                value={launchUrl}
+                onChange={(event) => setLaunchUrl(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to keep this app hidden from the Digital Workspace.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="app-category">Workspace Category</Label>
+              <Input
+                id="app-category"
+                placeholder="e.g. Reporting"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="app-icon">Icon</Label>
+              <Input
+                id="app-icon"
+                placeholder="e.g. LayoutDashboard"
+                value={icon}
+                onChange={(event) => setIcon(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="app-description">Description</Label>
+              <Textarea
+                id="app-description"
+                placeholder="Short description shown with the Workspace tile"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Resources</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Optional; blank rows are ignored.</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setResources((current) => [...current, emptyResource()])}
+              >
+                <Plus className="h-4 w-4 mr-1" /> Add resource
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {resources.map((resource, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Select
+                    value={resource.type}
+                    onValueChange={(type: ResourceType) =>
+                      setResources((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, type } : item,
+                        ),
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {RESOURCE_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    className="flex-1"
+                    placeholder="Resource name"
+                    value={resource.name}
+                    onChange={(event) =>
+                      setResources((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, name: event.target.value } : item,
+                        ),
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title="Remove resource"
+                    onClick={() =>
+                      setResources((current) =>
+                        current.length === 1
+                          ? [emptyResource()]
+                          : current.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

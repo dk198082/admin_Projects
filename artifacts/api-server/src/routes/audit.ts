@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, count, inArray, notInArray, and, gte, sql, SQL } from "drizzle-orm";
+import { desc, eq, count, inArray, notInArray, and, gte, lt, sql, SQL } from "drizzle-orm";
 import {
   db,
   auditLogTable,
@@ -13,6 +13,8 @@ import {
 import {
   ListAuditLogQueryParams,
   ListAuditLogResponse,
+  GetActivityReportQueryParams,
+  GetActivityReportResponse,
   GetSummaryResponse,
   GetDeniedAccessSummaryQueryParams,
   GetDeniedAccessSummaryResponse,
@@ -119,6 +121,109 @@ router.get("/audit-log", async (req, res): Promise<void> => {
     ListAuditLogResponse.parse(
       rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
     ),
+  );
+});
+
+router.get("/activity-report", async (req, res): Promise<void> => {
+  const query = GetActivityReportQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const defaultFrom = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const from = query.data.from ?? defaultFrom;
+  const to = query.data.to ?? today;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!datePattern.test(from) || !datePattern.test(to)) {
+    res.status(400).json({ error: "from and to must use YYYY-MM-DD format" });
+    return;
+  }
+
+  const fromDate = new Date(`${from}T00:00:00.000Z`);
+  const toDate = new Date(`${to}T00:00:00.000Z`);
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime()) || from > to) {
+    res.status(400).json({ error: "The activity report date range is invalid" });
+    return;
+  }
+  toDate.setUTCDate(toDate.getUTCDate() + 1);
+
+  const [rows, users, apps] = await Promise.all([
+    db
+      .select()
+      .from(auditLogTable)
+      .where(
+        and(
+          eq(auditLogTable.action, "ACCESS_ALLOWED"),
+          gte(auditLogTable.createdAt, fromDate),
+          lt(auditLogTable.createdAt, toDate),
+        ),
+      )
+      .orderBy(desc(auditLogTable.createdAt)),
+    db.select({ entraObjectId: usersTable.entraObjectId, name: usersTable.name }).from(usersTable),
+    db.select({ name: appsTable.name }).from(appsTable),
+  ]);
+
+  const userNames = new Map(users.map((user) => [user.entraObjectId, user.name]));
+  const appNames = apps.map((app) => app.name).sort((a, b) => b.length - a.length);
+  type AllowedAccess = { person: string; app: string };
+  const allowedAccesses: AllowedAccess[] = [];
+  for (const row of rows) {
+    if (row.action !== "ACCESS_ALLOWED") continue;
+    const marker = " app=";
+    const markerIndex = row.detail.indexOf(marker);
+    const app = appNames.find(
+      (candidate) =>
+        markerIndex >= 0 &&
+        row.detail.slice(markerIndex + marker.length).startsWith(candidate) &&
+        (
+          row.detail.length === markerIndex + marker.length + candidate.length ||
+          row.detail[markerIndex + marker.length + candidate.length] === " "
+        ),
+    ) ?? "Unknown app";
+    allowedAccesses.push({ person: userNames.get(row.entity) ?? row.entity, app });
+  }
+
+  const personFilters = query.data.person
+    ?.map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const appFilter = query.data.app?.trim().toLowerCase();
+  const filteredAccesses = allowedAccesses.filter((event) => {
+    if (personFilters?.length && !personFilters.includes(event.person.toLowerCase())) return false;
+    if (appFilter && event.app.toLowerCase() !== appFilter) return false;
+    return true;
+  });
+
+  const byPersonApp = new Map<string, { person: string; app: string; allowedAccess: number }>();
+  const activePeople = new Set<string>();
+  const activeApps = new Set<string>();
+  const summary = {
+    allowedAccess: filteredAccesses.length,
+    activePeople: 0,
+    activeApps: 0,
+  };
+
+  for (const event of filteredAccesses) {
+    activePeople.add(event.person);
+    activeApps.add(event.app);
+    const key = `${event.person}\u0000${event.app}`;
+    const row = byPersonApp.get(key) ?? { person: event.person, app: event.app, allowedAccess: 0 };
+    row.allowedAccess += 1;
+    byPersonApp.set(key, row);
+  }
+
+  summary.activePeople = activePeople.size;
+  summary.activeApps = activeApps.size;
+  res.json(
+    GetActivityReportResponse.parse({
+      from,
+      to,
+      summary,
+      byPersonApp: [...byPersonApp.values()].sort(
+        (a, b) => b.allowedAccess - a.allowedAccess || a.person.localeCompare(b.person) || a.app.localeCompare(b.app),
+      ),
+    }),
   );
 });
 

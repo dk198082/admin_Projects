@@ -5,8 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AppResourceInput } from './appResourceInput';
 
-export interface AppInput {
+export interface AppCreateInput {
   /**
      * @minLength 1
      * @maxLength 100
@@ -32,4 +33,6 @@ export interface AppInput {
      * @nullable
      */
   category?: string | null;
+  /** @maxItems 100 */
+  resources?: AppResourceInput[];
 }

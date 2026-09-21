@@ -369,7 +369,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AppInput"
+              $ref: "#/components/schemas/AppCreateInput"
       responses:
         "201":
           description: Created app
@@ -733,6 +733,49 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuditEntry"
+  /activity-report:
+    get:
+      operationId: getActivityReport
+      tags: [audit]
+      summary: Aggregate successful application access checks by person and application
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Inclusive UTC date in YYYY-MM-DD format; defaults to 30 days ago
+          schema: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        - name: to
+          in: query
+          required: false
+          description: Inclusive UTC date in YYYY-MM-DD format; defaults to today
+          schema: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        - name: person
+          in: query
+          required: false
+          description: Filter by one or more recorded person names
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string }
+        - name: app
+          in: query
+          required: false
+          description: Filter access-check activity by application name
+          schema: { type: string }
+      responses:
+        "200":
+          description: Activity report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityReport"
+        "400":
+          description: Invalid date or filter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /sync/error-log:
     get:
       operationId: listSyncErrors
@@ -1280,16 +1323,45 @@ components:
         roleId: { type: integer }
     App:
       type: object
-      required: [id, name, resourceCount]
+      required: [id, name, launchUrl, description, icon, category, resourceCount]
       properties:
         id: { type: integer }
         name: { type: string }
+        launchUrl: { type: ["string", "null"] }
+        description: { type: ["string", "null"] }
+        icon: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
         resourceCount: { type: integer }
     AppInput:
       type: object
       required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 100 }
+        launchUrl: { type: ["string", "null"], maxLength: 2000 }
+        description: { type: ["string", "null"], maxLength: 500 }
+        icon: { type: ["string", "null"], maxLength: 100 }
+        category: { type: ["string", "null"], maxLength: 100 }
+    AppCreateInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        launchUrl: { type: ["string", "null"], maxLength: 2000 }
+        description: { type: ["string", "null"], maxLength: 500 }
+        icon: { type: ["string", "null"], maxLength: 100 }
+        category: { type: ["string", "null"], maxLength: 100 }
+        resources:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/AppResourceInput"
+    AppResourceInput:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        type: { type: string, enum: [Form, Tab, Table] }
+        description: { type: string }
     ResourceInput:
       type: object
       required: [appId, name, type]
@@ -1408,3 +1480,29 @@ components:
         detail: { type: string }
         actor: { type: string }
         createdAt: { type: string }
+    ActivityReport:
+      type: object
+      required: [from, to, summary, byPersonApp]
+      properties:
+        from: { type: string }
+        to: { type: string }
+        summary:
+          $ref: "#/components/schemas/ActivityReportSummary"
+        byPersonApp:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityReportPersonApp"
+    ActivityReportSummary:
+      type: object
+      required: [allowedAccess, activePeople, activeApps]
+      properties:
+        allowedAccess: { type: integer }
+        activePeople: { type: integer }
+        activeApps: { type: integer }
+    ActivityReportPersonApp:
+      type: object
+      required: [person, app, allowedAccess]
+      properties:
+        person: { type: string }
+        app: { type: string }
+        allowedAccess: { type: integer }

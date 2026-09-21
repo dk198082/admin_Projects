@@ -12,6 +12,7 @@ import Security from "@/pages/Security";
 import Audit from "@/pages/Audit";
 import SyncErrors from "@/pages/SyncErrors";
 import WorkOrderPurge from "@/pages/WorkOrderPurge";
+import ActivityReport from "@/pages/ActivityReport";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ function Router() {
           <Route path="/access-mapping" component={AccessMapping} />
           <Route path="/security" component={Security} />
           <Route path="/audit" component={Audit} />
+          <Route path="/activity-report" component={ActivityReport} />
           <Route path="/sync-errors" component={SyncErrors} />
           <Route path="/work-order-purge" component={WorkOrderPurge} />
           <Route component={NotFound} />

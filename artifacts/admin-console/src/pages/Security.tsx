@@ -5,7 +5,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Lock, ShieldAlert, KeyRound, Eye, AppWindow } from "lucide-react";
+import { ShieldAlert, KeyRound, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SecurityPolicy } from "@workspace/api-client-react";
 import ApiKeysSection from "@/components/ApiKeysSection";
 import { AddAppDialog } from "@/components/ManageAppsDialog";
+import WorkspaceTilesSection from "@/components/WorkspaceTilesSection";
 
 export default function Security() {
   const queryClient = useQueryClient();
@@ -56,15 +57,9 @@ export default function Security() {
     <div className="p-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Security Policies</h1>
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <p className="text-muted-foreground mt-1">
-            Configure global and app-specific security parameters.
-          </p>
-          <Button variant="outline" onClick={() => setIsAddAppOpen(true)}>
-            <AppWindow className="h-4 w-4 mr-2" />
-            Add App
-          </Button>
-        </div>
+        <p className="text-muted-foreground mt-1">
+          Configure global and app-specific security parameters.
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -212,6 +207,11 @@ export default function Security() {
           );
         })}
       </Tabs>
+
+      <WorkspaceTilesSection
+        apps={apps ?? []}
+        onAdd={() => setIsAddAppOpen(true)}
+      />
 
       <ApiKeysSection />
       <AddAppDialog

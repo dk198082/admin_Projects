@@ -321,6 +321,14 @@ export interface RoleAssignmentInput {
 export interface App {
   id: number;
   name: string;
+  /** @nullable */
+  launchUrl: string | null;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  icon: string | null;
+  /** @nullable */
+  category: string | null;
   resourceCount: number;
 }
 
@@ -330,6 +338,75 @@ export interface AppInput {
      * @maxLength 100
      */
   name: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  launchUrl?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  icon?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  category?: string | null;
+}
+
+export type AppResourceInputType = typeof AppResourceInputType[keyof typeof AppResourceInputType];
+
+
+export const AppResourceInputType = {
+  Form: 'Form',
+  Tab: 'Tab',
+  Table: 'Table',
+} as const;
+
+export interface AppResourceInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  type: AppResourceInputType;
+  description?: string;
+}
+
+export interface AppCreateInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  launchUrl?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  icon?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  category?: string | null;
+  /** @maxItems 100 */
+  resources?: AppResourceInput[];
 }
 
 export type ResourceInputType = typeof ResourceInputType[keyof typeof ResourceInputType];
@@ -463,6 +540,25 @@ export interface AuditEntry {
   createdAt: string;
 }
 
+export interface ActivityReportSummary {
+  allowedAccess: number;
+  activePeople: number;
+  activeApps: number;
+}
+
+export interface ActivityReportPersonApp {
+  person: string;
+  app: string;
+  allowedAccess: number;
+}
+
+export interface ActivityReport {
+  from: string;
+  to: string;
+  summary: ActivityReportSummary;
+  byPersonApp: ActivityReportPersonApp[];
+}
+
 export type SearchEntraUsersParams = {
 /**
  * @minLength 2
@@ -515,6 +611,27 @@ export const ListAuditLogOutcome = {
   allowed: 'allowed',
   denied: 'denied',
 } as const;
+
+export type GetActivityReportParams = {
+/**
+ * Inclusive UTC date in YYYY-MM-DD format; defaults to 30 days ago
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+from?: string;
+/**
+ * Inclusive UTC date in YYYY-MM-DD format; defaults to today
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+to?: string;
+/**
+ * Filter by one or more recorded person names
+ */
+person?: string[];
+/**
+ * Filter access-check activity by application name
+ */
+app?: string;
+};
 
 export type ListSyncErrorsParams = {
 limit?: number;

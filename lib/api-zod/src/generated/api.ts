@@ -304,6 +304,10 @@ export const RemoveAccessMappingResponse = zod.object({
 export const ListAppsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "launchUrl": zod.string().nullable(),
+  "description": zod.string().nullable(),
+  "icon": zod.string().nullable(),
+  "category": zod.string().nullable(),
   "resourceCount": zod.number()
 })
 export const ListAppsResponse = zod.array(ListAppsResponseItem)
@@ -314,15 +318,40 @@ export const ListAppsResponse = zod.array(ListAppsResponseItem)
  */
 export const createAppBodyNameMax = 100;
 
+export const createAppBodyLaunchUrlMax = 2000;
+
+export const createAppBodyDescriptionMax = 500;
+
+export const createAppBodyIconMax = 100;
+
+export const createAppBodyCategoryMax = 100;
+
+export const createAppBodyResourcesItemNameMax = 200;
+
+export const createAppBodyResourcesMax = 100;
+
 
 
 export const CreateAppBody = zod.object({
-  "name": zod.string().min(1).max(createAppBodyNameMax)
+  "name": zod.string().min(1).max(createAppBodyNameMax),
+  "launchUrl": zod.string().max(createAppBodyLaunchUrlMax).nullish(),
+  "description": zod.string().max(createAppBodyDescriptionMax).nullish(),
+  "icon": zod.string().max(createAppBodyIconMax).nullish(),
+  "category": zod.string().max(createAppBodyCategoryMax).nullish(),
+  "resources": zod.array(zod.object({
+  "name": zod.string().min(1).max(createAppBodyResourcesItemNameMax),
+  "type": zod.enum(['Form', 'Tab', 'Table']),
+  "description": zod.string().optional()
+})).max(createAppBodyResourcesMax).optional()
 })
 
 export const CreateAppResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "launchUrl": zod.string().nullable(),
+  "description": zod.string().nullable(),
+  "icon": zod.string().nullable(),
+  "category": zod.string().nullable(),
   "resourceCount": zod.number()
 })
 
@@ -336,15 +365,31 @@ export const UpdateAppParams = zod.object({
 
 export const updateAppBodyNameMax = 100;
 
+export const updateAppBodyLaunchUrlMax = 2000;
+
+export const updateAppBodyDescriptionMax = 500;
+
+export const updateAppBodyIconMax = 100;
+
+export const updateAppBodyCategoryMax = 100;
+
 
 
 export const UpdateAppBody = zod.object({
-  "name": zod.string().min(1).max(updateAppBodyNameMax)
+  "name": zod.string().min(1).max(updateAppBodyNameMax),
+  "launchUrl": zod.string().max(updateAppBodyLaunchUrlMax).nullish(),
+  "description": zod.string().max(updateAppBodyDescriptionMax).nullish(),
+  "icon": zod.string().max(updateAppBodyIconMax).nullish(),
+  "category": zod.string().max(updateAppBodyCategoryMax).nullish()
 })
 
 export const UpdateAppResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "launchUrl": zod.string().nullable(),
+  "description": zod.string().nullable(),
+  "icon": zod.string().nullable(),
+  "category": zod.string().nullable(),
   "resourceCount": zod.number()
 })
 
@@ -617,6 +662,36 @@ export const ListAuditLogResponseItem = zod.object({
   "createdAt": zod.string()
 })
 export const ListAuditLogResponse = zod.array(ListAuditLogResponseItem)
+
+
+/**
+ * @summary Aggregate successful application access checks by person and application
+ */
+export const getActivityReportQueryFromRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getActivityReportQueryToRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const GetActivityReportQueryParams = zod.object({
+  "from": zod.coerce.string().regex(getActivityReportQueryFromRegExp).optional().describe('Inclusive UTC date in YYYY-MM-DD format; defaults to 30 days ago'),
+  "to": zod.coerce.string().regex(getActivityReportQueryToRegExp).optional().describe('Inclusive UTC date in YYYY-MM-DD format; defaults to today'),
+  "person": zod.array(zod.coerce.string()).optional().describe('Filter by one or more recorded person names'),
+  "app": zod.coerce.string().optional().describe('Filter access-check activity by application name')
+})
+
+export const GetActivityReportResponse = zod.object({
+  "from": zod.string(),
+  "to": zod.string(),
+  "summary": zod.object({
+  "allowedAccess": zod.number(),
+  "activePeople": zod.number(),
+  "activeApps": zod.number()
+}),
+  "byPersonApp": zod.array(zod.object({
+  "person": zod.string(),
+  "app": zod.string(),
+  "allowedAccess": zod.number()
+}))
+})
 
 
 /**

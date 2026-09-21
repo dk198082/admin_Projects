@@ -16,8 +16,12 @@ SET search_path TO admin_console;
 -- 1. apps — the internal applications being secured
 -- ------------------------------------------------------------
 CREATE TABLE apps (
-    id      serial PRIMARY KEY,
-    name    text NOT NULL,
+    id          serial PRIMARY KEY,
+    name        text NOT NULL,
+    launch_url  text,
+    description text,
+    icon        text,
+    category    text,
     CONSTRAINT apps_name_unique UNIQUE (name)
 );
 

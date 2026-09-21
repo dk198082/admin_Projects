@@ -60,7 +60,14 @@ vi.mock("../lib/audit", () => ({
 
 import appsResourcesRouter from "./appsResources";
 
-const APP = { id: 42, name: "Customer Portal" };
+const APP = {
+  id: 42,
+  name: "Customer Portal",
+  launchUrl: null,
+  description: null,
+  icon: null,
+  category: null,
+};
 const ENTITLEMENT_ROLES = [
   {
     id: 101,
@@ -138,5 +145,101 @@ describe("app creation entitlement roles", () => {
       "Customer Portal - Read / Write",
     ]);
     expect(roleInserts.every((role) => role.appId === APP.id && role.isEntitlement)).toBe(true);
+  });
+
+  it("creates supplied resources and grants both entitlement roles access", async () => {
+    const createdResources = [
+      { id: 201, appId: APP.id, name: "Dashboard", type: "Tab", description: "" },
+      { id: 202, appId: APP.id, name: "Orders", type: "Table", description: "" },
+    ];
+    mockDb._selectQueue.push(
+      [],
+      createdResources,
+      [], [], [],
+      [], [], [],
+    );
+    mockDb._insertQueue.push(
+      [APP],
+      [],
+      [],
+      [ENTITLEMENT_ROLES[0]],
+      [],
+      [ENTITLEMENT_ROLES[1]],
+      [],
+    );
+
+    const response = await request(app).post("/api/apps").send({
+      name: "Customer Portal",
+      resources: [
+        { name: " Dashboard ", type: "Tab" },
+        { name: "Orders", type: "Table" },
+      ],
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({ ...APP, resourceCount: 2 });
+    expect(mockDb._insertedValues).toContainEqual([
+      { appId: APP.id, name: "Dashboard", type: "Tab", description: "" },
+      { appId: APP.id, name: "Orders", type: "Table", description: "" },
+    ]);
+
+    const grantInserts = mockDb._insertedValues.filter(
+      (values): values is Array<{ roleId: number; resourceId: number; level: string }> =>
+        Array.isArray(values) &&
+        values.length === 2 &&
+        values.every(
+          (value) =>
+            typeof value === "object" &&
+            value !== null &&
+            "roleId" in value &&
+            "resourceId" in value &&
+            "level" in value,
+        ),
+    );
+    expect(grantInserts).toEqual([
+      [
+        { roleId: ENTITLEMENT_ROLES[0].id, resourceId: 201, level: "View" },
+        { roleId: ENTITLEMENT_ROLES[0].id, resourceId: 202, level: "View" },
+      ],
+      [
+        { roleId: ENTITLEMENT_ROLES[1].id, resourceId: 201, level: "Read & Write" },
+        { roleId: ENTITLEMENT_ROLES[1].id, resourceId: 202, level: "Read & Write" },
+      ],
+    ]);
+  });
+
+  it("persists Workspace tile fields when an app is created", async () => {
+    const appWithTile = {
+      ...APP,
+      launchUrl: "https://customer.example.com",
+      description: "Customer self-service",
+      icon: "Users",
+      category: "Customer Service",
+    };
+    mockDb._selectQueue.push([], [], [], [], [], []);
+    mockDb._insertQueue.push(
+      [appWithTile],
+      [],
+      [ENTITLEMENT_ROLES[0]],
+      [ENTITLEMENT_ROLES[1]],
+    );
+
+    const response = await request(app).post("/api/apps").send({
+      name: "Customer Portal",
+      launchUrl: " https://customer.example.com ",
+      description: " Customer self-service ",
+      icon: " Users ",
+      category: " Customer Service ",
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({ ...appWithTile, resourceCount: 0 });
+    expect(mockDb._insertedValues).toContainEqual({
+      name: "Customer Portal",
+      launchUrl: "https://customer.example.com",
+      description: "Customer self-service",
+      icon: "Users",
+      category: "Customer Service",
+    });
   });
 });

@@ -119,9 +119,15 @@ router.get("/access-check", async (req, res): Promise<void> => {
   }
 
   const roleRows = await db
-    .select({ roleId: rolesTable.id, roleName: rolesTable.name })
+    .select({
+      roleId: rolesTable.id,
+      roleName: rolesTable.name,
+      roleAppName: appsTable.name,
+      isEntitlement: rolesTable.isEntitlement,
+    })
     .from(roleAssignmentsTable)
     .innerJoin(rolesTable, eq(roleAssignmentsTable.roleId, rolesTable.id))
+    .leftJoin(appsTable, eq(rolesTable.appId, appsTable.id))
     .where(eq(roleAssignmentsTable.userId, user.id));
 
   if (roleRows.length === 0) {
@@ -142,11 +148,14 @@ router.get("/access-check", async (req, res): Promise<void> => {
 
   const roleIds = new Set(roleRows.map((r) => r.roleId));
   const appLower = app.trim().toLowerCase();
+  const hasAppEntitlement = roleRows.some(
+    (r) => r.isEntitlement && r.roleAppName?.trim().toLowerCase() === appLower,
+  );
   const matching = permissionRows.filter(
     (p) => roleIds.has(p.roleId) && p.appName.toLowerCase() === appLower,
   );
 
-  if (matching.length === 0) {
+  if (!hasAppEntitlement && matching.length === 0) {
     await deny(`User has no permissions for app "${app}"`, {
       userName: user.name,
       status: user.status,

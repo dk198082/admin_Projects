@@ -21,6 +21,7 @@ const { mockDb } = vi.hoisted(() => {
     chain.from = () => chain;
     chain.where = () => chain;
     chain.innerJoin = () => chain;
+    chain.leftJoin = () => chain;
     chain.then = (onFulfilled: (v: unknown[]) => unknown) =>
       Promise.resolve(result).then(onFulfilled);
     return chain;
@@ -123,7 +124,19 @@ const ACTIVE_USER = {
   createdAt: new Date("2025-01-01T00:00:00Z"),
 };
 
-const ROLE_ROW = { roleId: 5, roleName: "Editor" };
+const ROLE_ROW = {
+  roleId: 5,
+  roleName: "Editor",
+  roleAppName: null,
+  isEntitlement: false,
+};
+
+const ENTITLEMENT_ROLE_ROW = {
+  roleId: 6,
+  roleName: "MyApp - Read / Write",
+  roleAppName: "MyApp",
+  isEntitlement: true,
+};
 
 const PERMISSION_ROW = {
   roleId: 5,
@@ -159,6 +172,7 @@ function makeSelectChain(result: unknown[]) {
   chain.from = () => chain;
   chain.where = () => chain;
   chain.innerJoin = () => chain;
+  chain.leftJoin = () => chain;
   chain.then = (onFulfilled: (v: unknown[]) => unknown) =>
     Promise.resolve(result).then(onFulfilled);
   return chain;
@@ -392,6 +406,26 @@ describe("GET /api/access-check", () => {
     expect(res.body.permissions).toEqual([
       { resource: "Documents", level: "read & write" },
     ]);
+  });
+
+  it("returns allowed for an app entitlement when the app has no resources", async () => {
+    queueSelectResults(
+      [ACTIVE_API_KEY],
+      [ACTIVE_USER],
+      [ENTITLEMENT_ROLE_ROW],
+      [],
+    );
+
+    const res = await request(app)
+      .get("/api/access-check")
+      .set("X-API-Key", VALID_RAW_KEY)
+      .query({ entraObjectId: ACTIVE_USER.entraObjectId, app: "MyApp" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.allowed).toBe(true);
+    expect(res.body.reason).toBeNull();
+    expect(res.body.roles).toEqual(["MyApp - Read / Write"]);
+    expect(res.body.permissions).toEqual([]);
   });
 
   it("returns the highest permission level when a resource has multiple grants", async () => {

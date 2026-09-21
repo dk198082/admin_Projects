@@ -183,6 +183,7 @@ const PROTECTED_ROUTES: Array<{ group: string; method: "get" | "post"; path: str
   { group: "grants",           method: "get",  path: "/api/access-grants" },
   { group: "security",         method: "get",  path: "/api/security-policies" },
   { group: "audit",            method: "get",  path: "/api/audit-log" },
+  { group: "audit",            method: "get",  path: "/api/activity-report" },
   { group: "sync",             method: "get",  path: "/api/sync/error-log" },
   { group: "entra",            method: "get",  path: "/api/entra/users" },
   { group: "permissionMatrix", method: "get",  path: "/api/permission-matrix/export" },
