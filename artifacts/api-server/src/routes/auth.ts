@@ -168,14 +168,23 @@ router.get("/auth/embedded-complete", (req, res) => {
       </head>
       <body>
         <script>
-          window.opener?.postMessage(
-            { type: "ADMIN_CONSOLE_AUTH_COMPLETE" },
-            ${JSON.stringify(workspaceOrigin)}
-          );
+          console.log("ADMIN CONSOLE EMBEDDED COMPLETE");
+          console.log("window.opener:", window.opener);
+          console.log("workspaceOrigin:", ${JSON.stringify(workspaceOrigin)});
+
+          if (window.opener) {
+            window.opener.postMessage(
+              { type: "ADMIN_CONSOLE_AUTH_COMPLETE" },
+              ${JSON.stringify(workspaceOrigin)}
+            );
+            console.log("ADMIN CONSOLE AUTH MESSAGE SENT");
+          } else {
+            console.error("ADMIN CONSOLE: window.opener is NULL");
+          }
 
           setTimeout(() => {
             window.close();
-          }, 300);
+          }, 500);
         </script>
       </body>
     </html>
