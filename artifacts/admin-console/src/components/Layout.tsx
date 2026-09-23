@@ -23,6 +23,8 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+const isEmbedded = window.self !== window.top;
+
 const navItems = [
   { href: "/", label: "Dashboard", icon: ShieldCheck },
   { href: "/users", label: "Users", icon: Users },
@@ -46,7 +48,6 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
     queryClient.clear();
     window.location.href = import.meta.env.BASE_URL;
   };
-
   return (
     <div className="p-3 shrink-0 border-t border-sidebar-border">
       {!collapsed && (
@@ -54,7 +55,7 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           {user?.email ?? user?.name ?? ""}
         </div>
       )}
-      <Button
+      {!isEmbedded && ( <Button
         variant="ghost"
         size="sm"
         className={cn(
@@ -67,6 +68,7 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
         <LogOut className="h-4 w-4 shrink-0" />
         {!collapsed && <span className="text-sm">Sign out</span>}
       </Button>
+      )}
     </div>
   );
 }
