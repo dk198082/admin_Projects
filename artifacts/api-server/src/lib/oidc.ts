@@ -25,14 +25,28 @@ export function getOidcConfig(): Promise<client.Configuration> {
 const HOST_PATTERN = /^[a-zA-Z0-9.-]+(:\d+)?$/;
 
 export function getRedirectUri(req: Request): string {
-  // trust proxy is enabled, so req.protocol honors the first-hop
-  // X-Forwarded-Proto value set by the platform proxy.
+  const frontendUrl = process.env.FRONTEND_URL;
+
+  if (frontendUrl) {
+    const url = new URL(frontendUrl);
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error("Invalid FRONTEND_URL protocol");
+    }
+
+    return `${url.origin}/api/auth/callback`;
+  }
+
+  // Fallback for production environments where the public host
+  // is supplied through the request/proxy.
   const proto = req.protocol === "https" ? "https" : "http";
   const forwardedHost = req.get("x-forwarded-host");
   const firstHop = forwardedHost?.split(",")[0]?.trim();
   const host = firstHop || req.get("host") || "";
+
   if (!HOST_PATTERN.test(host)) {
     throw new Error("Invalid request host for redirect URI");
   }
+
   return `${proto}://${host}/api/auth/callback`;
 }
