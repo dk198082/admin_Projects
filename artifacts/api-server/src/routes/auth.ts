@@ -159,27 +159,45 @@ router.get("/auth/embedded-complete", (req, res) => {
   const workspaceOrigin =
     process.env.WORKSPACE_FRONTEND_URL ?? "http://localhost:5176";
 
-  res.type("html").send(`
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+  });
+
+  res.status(200).type("html").send(`
     <!doctype html>
     <html>
       <head>
         <meta charset="utf-8" />
+        <meta
+          http-equiv="Cache-Control"
+          content="no-store, no-cache, must-revalidate"
+        />
         <title>Authentication Complete</title>
       </head>
       <body>
         <script>
-          console.log("ADMIN CONSOLE EMBEDDED COMPLETE");
-          console.log("window.opener:", window.opener);
-          console.log("workspaceOrigin:", ${JSON.stringify(workspaceOrigin)});
+          console.log("ADMIN CONSOLE: embedded authentication complete");
+          console.log("ADMIN CONSOLE: opener =", window.opener);
+          console.log(
+            "ADMIN CONSOLE: workspace origin =",
+            ${JSON.stringify(workspaceOrigin)}
+          );
 
           if (window.opener) {
             window.opener.postMessage(
               { type: "ADMIN_CONSOLE_AUTH_COMPLETE" },
               ${JSON.stringify(workspaceOrigin)}
             );
-            console.log("ADMIN CONSOLE AUTH MESSAGE SENT");
+
+            console.log(
+              "ADMIN CONSOLE: AUTH_COMPLETE message sent"
+            );
           } else {
-            console.error("ADMIN CONSOLE: window.opener is NULL");
+            console.error(
+              "ADMIN CONSOLE: window.opener is NULL"
+            );
           }
 
           setTimeout(() => {
