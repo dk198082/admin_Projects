@@ -16,6 +16,7 @@ declare module "express-session" {
   interface SessionData {
     codeVerifier?: string;
     oauthState?: string;
+    embeddedLogin?: boolean;  // added for embedd login 
     user?: {
       id: number;
       entraObjectId: string;
@@ -29,6 +30,10 @@ const router: IRouter = Router();
 const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5175";
 router.get("/auth/login", async (req, res, next) => {
   try {
+
+    const embeddedLogin = req.query.embedded === "1";   // added for embedded login 
+    req.session.embeddedLogin = embeddedLogin;
+
     const config = await getOidcConfig();
     const codeVerifier = oidcClient.randomPKCECodeVerifier();
     const codeChallenge = await oidcClient.calculatePKCECodeChallenge(codeVerifier);
@@ -53,7 +58,7 @@ router.get("/auth/login", async (req, res, next) => {
 router.get("/auth/callback", async (req, res, next) => {
   try {
     const config = await getOidcConfig();
-    const { codeVerifier, oauthState } = req.session;
+    const { codeVerifier, oauthState,embeddedLogin } = req.session;
     if (!codeVerifier || !oauthState) {
       res.redirect(`${FRONTEND_URL}/?auth_error=session_expired`);
       return;
@@ -135,13 +140,46 @@ router.get("/auth/callback", async (req, res, next) => {
     };
 
     await logAudit("login", "Session", `${name} (${email}) signed in via Entra ID`, name);
-    // res.redirect("/");
-    res.redirect(FRONTEND_URL);
-  } catch (err) {
-    req.log.error({ err }, "Entra ID callback failed");
-    // res.redirect("/?auth_error=callback_failed");
-    res.redirect(`${FRONTEND_URL}/?auth_error=callback_failed`);
-  }
+      // res.redirect("/");
+      if (embeddedLogin) {
+          delete req.session.embeddedLogin;                  // added for embedded login
+          res.redirect("/api/auth/embedded-complete");
+          return;
+      }
+        res.redirect(FRONTEND_URL);
+      } catch (err) {
+        req.log.error({ err }, "Entra ID callback failed");
+        // res.redirect("/?auth_error=callback_failed");
+        res.redirect(`${FRONTEND_URL}/?auth_error=callback_failed`);
+      }
+});
+
+// added embedded login Details 
+router.get("/auth/embedded-complete", (req, res) => {
+  const workspaceOrigin =
+    process.env.WORKSPACE_FRONTEND_URL ?? "http://localhost:5176";
+
+  res.type("html").send(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Authentication Complete</title>
+      </head>
+      <body>
+        <script>
+          window.opener?.postMessage(
+            { type: "ADMIN_CONSOLE_AUTH_COMPLETE" },
+            ${JSON.stringify(workspaceOrigin)}
+          );
+
+          setTimeout(() => {
+            window.close();
+          }, 300);
+        </script>
+      </body>
+    </html>
+  `);
 });
 
 router.get("/auth/me", (req, res) => {
