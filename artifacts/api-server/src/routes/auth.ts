@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import { getOidcConfig, getRedirectUri } from "../lib/oidc";
 import { logAudit } from "../lib/audit";
+import { verifyEmbeddedSsoToken } from "../lib/embedded-sso";
 
 declare module "express-session" {
   interface SessionData {
@@ -51,6 +52,211 @@ router.get("/auth/login", async (req, res, next) => {
     });
     res.redirect(url.href);
   } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/auth/embedded-sso", async (req, res, next) => {
+  try {
+    const token =
+      typeof req.query.token === "string"
+        ? req.query.token
+        : "";
+
+    const returnTo =
+      typeof req.query.returnTo === "string"
+        ? req.query.returnTo
+        : "/";
+
+    req.log.info(
+      {
+        hasToken: Boolean(token),
+        returnTo,
+      },
+      "Admin Console embedded SSO started",
+    );
+
+    if (!token) {
+      res.status(400).type("text").send("Missing SSO token.");
+      return;
+    }
+
+    const identity = verifyEmbeddedSsoToken(
+      token,
+      "admin-console",
+    );
+
+    if (!identity) {
+      req.log.warn(
+        "Admin Console embedded SSO token invalid or expired",
+      );
+
+      res
+        .status(401)
+        .type("text")
+        .send("Invalid or expired SSO token.");
+
+      return;
+    }
+
+    const entraObjectId = identity.sub;
+    const email = identity.email;
+    const name = identity.name;
+
+    // Verify that the user has an active Admin Console entitlement.
+    const [entitled] = await db
+      .select({
+        userId: usersTable.id,
+      })
+      .from(usersTable)
+      .innerJoin(
+        roleAssignmentsTable,
+        eq(
+          roleAssignmentsTable.userId,
+          usersTable.id,
+        ),
+      )
+      .innerJoin(
+        rolesTable,
+        eq(
+          roleAssignmentsTable.roleId,
+          rolesTable.id,
+        ),
+      )
+      .innerJoin(
+        appsTable,
+        eq(
+          rolesTable.appId,
+          appsTable.id,
+        ),
+      )
+      .where(
+        and(
+          eq(
+            usersTable.entraObjectId,
+            entraObjectId,
+          ),
+          eq(
+            usersTable.status,
+            "active",
+          ),
+          eq(
+            rolesTable.isEntitlement,
+            true,
+          ),
+          eq(
+            appsTable.name,
+            "Admin Console",
+          ),
+        ),
+      )
+      .limit(1);
+
+    if (!entitled) {
+      req.log.warn(
+        {
+          entraObjectId,
+          email,
+          name,
+        },
+        "Embedded SSO denied: no Admin Console entitlement",
+      );
+
+      await logAudit(
+        "ACCESS_DENIED",
+        entraObjectId,
+        `${name} (${email}) denied Admin Console embedded login — no entitlement assigned`,
+        name,
+      );
+
+      res
+        .status(403)
+        .type("text")
+        .send(
+          "User is authenticated but not authorized for Admin Console.",
+        );
+
+      return;
+    }
+
+    // Create/update the Admin Console application user.
+    const [appUser] = await db
+      .insert(appUsersTable)
+      .values({
+        entraObjectId,
+        email,
+        name,
+      })
+      .onConflictDoUpdate({
+        target: appUsersTable.entraObjectId,
+        set: {
+          email,
+          name,
+          lastLoginAt: new Date(),
+        },
+      })
+      .returning();
+
+    // Regenerate session ID to prevent session fixation.
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve();
+      });
+    });
+
+    req.session.user = {
+      id: appUser.id,
+      entraObjectId: appUser.entraObjectId,
+      email: appUser.email,
+      name: appUser.name,
+    };
+
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve();
+      });
+    });
+
+    await logAudit(
+      "login",
+      "Session",
+      `${name} (${email}) signed in via Workspace SSO`,
+      name,
+    );
+
+    const safeReturnTo =
+      returnTo.startsWith("/") &&
+      !returnTo.startsWith("//") &&
+      !returnTo.includes("\\")
+        ? returnTo
+        : "/";
+
+    req.log.info(
+      {
+        entraObjectId,
+        email,
+        sessionId: req.sessionID,
+      },
+      "Admin Console embedded SSO session created",
+    );
+
+    res.redirect(safeReturnTo);
+  } catch (err) {
+    req.log.error(
+      { err },
+      "Admin Console embedded SSO failed",
+    );
+
     next(err);
   }
 });
